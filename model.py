@@ -13,7 +13,7 @@ class Net(nn.Module):
         self.layer2 = nn.Linear(args.out_embed, args.out_lay2)
         self.layer3 = nn.Linear(args.out_lay2, args.out_lay3)
         self.output = nn.Linear(args.out_lay3, args.output_dim)
-#Telling model what to do with the layers
+    #Telling model what to do with the layers
     def forward(self, x):
         y = self.embedding(x)
         y = self.layer2(y)
