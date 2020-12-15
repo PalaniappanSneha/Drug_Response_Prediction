@@ -30,15 +30,12 @@ parser.add_argument('--esthres', type=int, default=10, help='')
 parser.add_argument('--checkpoint', type=str, default=None, help='path/to/checkpoint.pth.tar')
 parser.add_argument('--data', type=str, default='RPPA', help='')
 parser.add_argument('--expr_dir', type=str, default="experiments/", help='path/to/save_dir')
-parser.add_argument('--cv', action='store_true', help='cross validation')
-
+parser.add_argument('--cv', action='store_true', help='cross validation') #--cv
 # parser.add_argument('--num_param', type=int, default =101)
-
 parser.add_argument('--out_embed', type=int, default=200)
 parser.add_argument('--out_lay2', type=int, default =128)
 parser.add_argument('--out_lay3', type=int, default =64)
 parser.add_argument('--output_dim',type=int, default=24)
-
 # num_parameter,out_embedding=200,out_layer2=128,out_layer3=32,output_dim=22
 
 def main(args):
@@ -47,33 +44,15 @@ def main(args):
     #Loss Function
     criterion = nn.MSELoss()
 
-    if args.data == 'RPPA':
-        if args.cv:
-            train_val_data, test_data = read_RPPA(cv=args.cv)
-        else:
-            train_data, train_label, valid_data, valid_label, test_data, test_label = read_RPPA(cv=args.cv)
-        args.num_param = 101
-    elif args.data == 'Meta':
-        train_data, train_label, valid_data, valid_label, test_data, test_label = read_Meta()
-        args.num_param = 80
-    elif args.data == 'Mut':
-        train_data, train_label, valid_data, valid_label, test_data, test_label = read_Mutations()
-        args.num_param = 1040
-    elif args.data == 'CNV':
-        train_data, train_label, valid_data, valid_label, test_data, test_label = read_CNV()
-        args.num_param = 88
-    else:
-        train_data, train_label, valid_data, valid_label, test_data, test_label = read_Expression()
-        args.num_param = 616
+
 
     args.is_cuda = torch.cuda.is_available()
     model = Net(args)     #force model to float and cuda
-    
+
     #Tell Pytorch to run the code on the GPU
     if args.is_cuda:
         model = model.cuda()
-    kf = KFold(n_splits=5)
-    kf.get_n_splits(train_val_data)
+
 
     #Adam optimizer
     optimizer = torch.optim.Adam(model.parameters(), args.lr, weight_decay=0)
@@ -222,9 +201,68 @@ def save_checkpoint(state, is_best, args, filename='checkpoint.pth.tar'):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    #data loading
+    #1) data loading
+    if args.data == 'RPPA':
+        if args.cv:
+            train_val_data, train_val_label, test_data = read_RPPA(cv=args.cv)
+        else:
+            train_data, train_label, valid_data, valid_label, test_data, test_label = read_RPPA(cv=args.cv)
+        args.num_param = 101
 
-    #kfold cv to get the n_split
+    elif args.data == 'Meta':
+        if args.cv:
+            train_val_data, test_data = read_Meta(cv=args.cv)
+        else:
+            train_data, train_label, valid_data, valid_label, test_data, test_label = read_Meta(cv=args.cv)
+        args.num_param = 80
+
+    elif args.data == 'Mut':
+        if args.cv:
+            train_val_data, test_data = read_Mutations(cv=args.cv)
+        else:
+            train_data, train_label, valid_data, valid_label, test_data, test_label = read_Mutations()
+        args.num_param = 1040
+
+    elif args.data == 'CNV':
+        if args.cv:
+            train_val_data, test_data = read_CNV(cv=args.cv)
+        else:
+            train_data, train_label, valid_data, valid_label, test_data, test_label = read_CNV()
+        args.num_param = 88
+
+    else:
+        if args.cv:
+            train_val_data, test_data = read_Expression(cv=args.cv)
+        else:
+            train_data, train_label, valid_data, valid_label, test_data, test_label = read_Expression()
+        args.num_param = 616
+
+    #2) kfold cv to get the n_split
+    #Specify how many folds to create
+    kf = KFold(n_splits=5)
+    #Returns the no. of splitting iterations in the cross validator
+    kf.get_n_splits(train_val_data)
+
+    #3)
+    #Append score for each iteration
+    scores_model =[]
+
+    #want to train my model using x_train and y_train. It will return the model score using test samples supplied as an argument
+    def get_score(model, X_train, X_test, Y_train, Y_test):
+        model.fit(x_train, y_train)
+        return model.score(x_test, y_test)
+
+    #In this case text_index is my val_index
+    for train_index, test_index in kf.split(train_val_data):
+        print(train_index, test_index)
+        X_train, X_test = train_val_data[train_index], train_val_data[test_index]
+        Y_train, Y_test = train_val_label[train_index], y[test_index]
+
+        scores_model.append(get_score(model, X_train, X_test, Y_train, Y_test))
+
+
+
+
     '''
     for train_index, test_index in kf.split(X):
         get train data,val data
