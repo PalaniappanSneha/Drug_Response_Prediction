@@ -3,18 +3,11 @@ from torch.utils.data import DataLoader, TensorDataset
 import torch
 import numpy as np
 import random
-
-# def read_metab(path='../Data/PCA/Metabolomics_PCA_with_label.csv'):
-# 	metab = pd.read_csv(path)
-# 	return metab.to_numpy()
-
-# def read_RPPA(path='../Data/PCA/RPPA_PCA_with_label.csv'):
-# 	RPPA = pd.read_csv(path)
-# 	RPPA.to_numpy()
-# 	return RPPA
+torch.manual_seed(10)
+np.random.seed(10)
 
 
-def read_RPPA(path='Data/DNN/DNN_Input_RPPA.csv'):
+def read_RPPA(path='Data/DNN/DNN_Input_RPPA.csv', cv = False):
 	with open(path) as csvfile:
 		RPPA_reader = csv.reader(csvfile)
 		RPPA = np.array(list(RPPA_reader))
@@ -28,8 +21,14 @@ def read_RPPA(path='Data/DNN/DNN_Input_RPPA.csv'):
 	idxs = list(set(idxs)^set(train_idxs))
 	valid_idxs = random.sample(idxs, k=int(0.15*r))
 	test_idxs = list(set(idxs)^set(valid_idxs))
+	#Perform 5-fold cross validation
+	if cv:
+		#Using both train and validation data for cross validation
+		train_val_data, test_data = RPPA[np.concatenate([train_idxs, valid_idxs]),:],  RPPA[test_idxs,:]
+		return train_val_data, test_data
+	else:
+		train_data, valid_data, test_data = RPPA[train_idxs,:], RPPA[valid_idxs,:], RPPA[test_idxs,:]
 
-	train_data, valid_data, test_data = RPPA[train_idxs,:], RPPA[valid_idxs,:], RPPA[test_idxs,:]
 	#Differentiating features and labels
 	train_data, train_label = train_data[:,:101], train_data[:,101:]
 	valid_data, valid_label = valid_data[:,:101], valid_data[:,101:]
@@ -124,17 +123,41 @@ def read_CNV(path='Data/DNN/DNN_Input_CNV.csv'):
 	test_data, test_label = test_data[:,:88], test_data[:,88:]
 	return train_data, train_label, valid_data, valid_label, test_data, test_label
 
+def read_combined(path='Data/DNN/DNN_Combined_Input_1.csv'):
+	with open(path) as csvfile:
+		comb_reader = csv.reader(csvfile)
+		comb = np.array(list(comb_reader))
+		comb = comb[1:,1:] #Ignoring the first column(label)
+		comb = comb.astype(float)
+
+	r,c = comb.shape
+	#Split data into train,validation,test data (using indexes)
+	idxs = list(range(r))
+	train_idxs = random.sample(idxs, k=int(0.70*r))
+	idxs = list(set(idxs)^set(train_idxs))
+	valid_idxs = random.sample(idxs, k=int(0.15*r))
+	test_idxs = list(set(idxs)^set(valid_idxs))
+
+	train_data, valid_data, test_data = comb[train_idxs,:], comb[valid_idxs,:], comb[test_idxs,:]
+	#Differentiating features and labels
+	train_data_RPPA, train_data_Meta, train_data_Mut, train_data_Exp, train_data_CNV,train_label = train_data[:,:101],train_data[:,101:181],train_data[:,181:1221],train_data[:,1221:1837],train_data[:,1837:1925],train_data[:,1925:]
+	valid_data_RPPA, valid_data_Meta, valid_data_Mut, valid_data_Exp, valid_data_CNV,valid_label = valid_data[:,:101],valid_data[:,101:181],valid_data[:,181:1221],valid_data[:,1221:1837],valid_data[:,1837:1925],valid_data[:,1925:]
+	test_data_RPPA, test_data_Meta, test_data_Mut, test_data_Exp, test_data_CNV,test_label = test_data[:,:101],test_data[:,101:181],test_data[:,181:1221],test_data[:,1221:1837],test_data[:,1837:1925],test_data[:,1925:]
+
+	return (torch.tensor(train_data_RPPA), torch.tensor(train_data_Meta), torch.tensor(train_data_Mut), torch.tensor(train_data_Exp), torch.tensor(train_data_CNV),torch.tensor(train_label)), (torch.tensor(valid_data_RPPA), torch.tensor(valid_data_Meta), torch.tensor(valid_data_Mut), torch.tensor(valid_data_Exp), torch.tensor(valid_data_CNV),torch.tensor(valid_label)), (torch.tensor(test_data_RPPA), torch.tensor(test_data_Meta), torch.tensor(test_data_Mut), torch.tensor(test_data_Exp), torch.tensor(test_data_CNV),torch.tensor(test_label))
+
+
 
 if __name__ == '__main__':
-	# df =  read_metab()
 	#read_RPPA returns 6 things
-	data = read_RPPA() #just replace this with read_...
+	data = read_combined() #just replace this with read_...
 	#Check training features and label shape
 	print(data[0][0].shape, data[1][0].shape)
-	#Convert to tensors?
+	#Convert to tensors
 	dataset = TensorDataset(torch.tensor(data[0]), torch.tensor(data[1]))
 	#Creating batches and making datasets iterable
 	train_dataloader = DataLoader(dataset, batch_size=16)
+	#Iterate over the data
 	for data in train_dataloader:
 		#prints shape of one batch of data (16,101),(16,24)
 		print(data[0].shape, data[1].shape)

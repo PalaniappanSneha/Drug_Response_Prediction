@@ -4,7 +4,7 @@ import warnings
 warnings.warn = warn
 
 
-from model import Net
+from model import Net, Net_combined
 import os
 from datasets import *
 import torch.optim
@@ -16,30 +16,30 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 torch.manual_seed(10)
-np.random.seed(10)
-from sklearn.model_selection import KFold
 
 
 parser = argparse.ArgumentParser(description='Drug Response Prediction')
 parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
-parser.add_argument('--epoch', type=int, default=500, help='number of epochs')
+parser.add_argument('--epoch', type=int, default=100, help='number of epochs')
 parser.add_argument('--lr', type=float, default=0.01, help='initial learning rate')
-parser.add_argument('--esthres', type=int, default=10, help='')
+parser.add_argument('--esthres', type=int, default=5, help='')
 # parser.add_argument('--est', type=int, default=30, help='early_stopping_threshold')
 
 parser.add_argument('--checkpoint', type=str, default=None, help='path/to/checkpoint.pth.tar')
 parser.add_argument('--data', type=str, default='RPPA', help='')
 parser.add_argument('--expr_dir', type=str, default="experiments/", help='path/to/save_dir')
-parser.add_argument('--cv', action='store_true', help='cross validation')
-
-# parser.add_argument('--num_param', type=int, default =101)
+# parser.add_argument('--num_param', type=int, default =101) #Remember to change parameter when reading diff dataset
 
 parser.add_argument('--out_embed', type=int, default=200)
 parser.add_argument('--out_lay2', type=int, default =128)
 parser.add_argument('--out_lay3', type=int, default =64)
 parser.add_argument('--output_dim',type=int, default=24)
 
+
+
 # num_parameter,out_embedding=200,out_layer2=128,out_layer3=32,output_dim=22
+
+
 
 def main(args):
 
@@ -47,40 +47,43 @@ def main(args):
     #Loss Function
     criterion = nn.MSELoss()
 
-    if args.data == 'RPPA':
-        if args.cv:
-            train_val_data, test_data = read_RPPA(cv=args.cv)
-        else:
-            train_data, train_label, valid_data, valid_label, test_data, test_label = read_RPPA(cv=args.cv)
-        args.num_param = 101
-    elif args.data == 'Meta':
-        train_data, train_label, valid_data, valid_label, test_data, test_label = read_Meta()
-        args.num_param = 80
-    elif args.data == 'Mut':
-        train_data, train_label, valid_data, valid_label, test_data, test_label = read_Mutations()
-        args.num_param = 1040
-    elif args.data == 'CNV':
-        train_data, train_label, valid_data, valid_label, test_data, test_label = read_CNV()
-        args.num_param = 88
-    else:
-        train_data, train_label, valid_data, valid_label, test_data, test_label = read_Expression()
-        args.num_param = 616
+    train_data, valid_data, test_data = read_combined()
+
+    args.num_param = 101
+    model_RPPA = Net(args)
+    model_RPPA = load_checkpoint('experiments/RPPA/model_best.pth.tar', model_RPPA)
+
+
+    args.num_param = 80
+    model_Meta = Net(args)
+    model_Meta = load_checkpoint('experiments/Meta/model_best.pth.tar', model_Meta)
+
+
+    args.num_param = 1040
+    model_Mut = Net(args)
+    model_Mut = load_checkpoint('experiments/Mut/model_best.pth.tar', model_Mut)
+
+
+    args.num_param = 88
+    model_CNV = Net(args)
+    model_CNV = load_checkpoint('experiments/CNV/model_best.pth.tar', model_CNV)
+
+    args.num_param = 616
+    model_Exp = Net(args)
+    model_Exp = load_checkpoint('experiments/Exp/model_best.pth.tar', model_Exp)
 
     args.is_cuda = torch.cuda.is_available()
-    model = Net(args)     #force model to float and cuda
-    
-    #Tell Pytorch to run the code on the GPU
+
+    model = Net_combined(args, model_RPPA, model_Meta, model_Mut, model_Exp, model_CNV)     #force model to float and cuda
     if args.is_cuda:
         model = model.cuda()
-    kf = KFold(n_splits=5)
-    kf.get_n_splits(train_val_data)
 
     #Adam optimizer
-    optimizer = torch.optim.Adam(model.parameters(), args.lr, weight_decay=0)
+    optimizer = torch.optim.Adam(model.parameters(), args.lr)
 
-    train_loader = torch.utils.data.DataLoader(TensorDataset(torch.tensor(train_data),torch.tensor(train_label)), batch_size=args.batchSize, shuffle = True,num_workers=0, pin_memory=True)
-    test_loader = torch.utils.data.DataLoader(TensorDataset(torch.tensor(test_data), torch.tensor(test_label)), batch_size=args.batchSize, shuffle = True, num_workers=0, pin_memory=True)
-    val_loader = torch.utils.data.DataLoader(TensorDataset(torch.tensor(valid_data),torch.tensor(valid_label)), batch_size=args.batchSize, shuffle = True, num_workers=0, pin_memory=True)
+    train_loader = torch.utils.data.DataLoader(TensorDataset(train_data[0],train_data[1], train_data[2],train_data[3],train_data[4],train_data[5]), batch_size=args.batchSize, shuffle = True,num_workers=0, pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(TensorDataset(valid_data[0],valid_data[1], valid_data[2],valid_data[3],valid_data[4],valid_data[5]), batch_size=args.batchSize, shuffle = True, num_workers=0, pin_memory=True)
+    val_loader = torch.utils.data.DataLoader(TensorDataset(test_data[0],test_data[1], test_data[2],test_data[3],test_data[4],test_data[5]), batch_size=args.batchSize, shuffle = True, num_workers=0, pin_memory=True)
 
     ### print options ###
 
@@ -105,7 +108,7 @@ def main(args):
         all_valid_loss.append(epoch_val_loss)
 
         # evaluate on test set
-        epoch_test_loss = validate(test_loader, model, criterion, args, test_flag =True)
+        epoch_test_loss = validate(test_loader, model, criterion, args)
         all_test_loss.append(epoch_test_loss)
 
         #Early Stopping
@@ -135,7 +138,8 @@ def main(args):
     plt.ylabel('loss')
     plt.xlabel('No. of epochs')
     plt.legend(['train', 'test'], loc='upper right')
-    plt.savefig(os.path.join(args.expr_dir, 'RPPA_hid3_64.png'))
+    plt.savefig(os.path.join(args.expr_dir, 'testplt1.png'))
+
 
     return best_valid_loss, test_loss_best_val
 
@@ -146,17 +150,17 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     stime = time.time()
     #Updating the parameters each iteration. (# of iterations = # batches)
     #Each iteration: 1)Forward Propogation 2)Compute Costs 3)Backpropagation 4)Update parameters
-    for i, (input, target) in enumerate(train_loader):
+    for i, (input1,input2,input3,input4,input5, target) in enumerate(train_loader):
         # measure data loading time
+        #???
         target = target.float()
-        input = input.float()
-
+        input1,input2,input3,input4,input5 = input1.float(),input2.float(),input3.float(),input4.float(),input5.float()
         if args.is_cuda:
             target = target.cuda()
-            input = input.cuda()
+            input1,input2,input3,input4,input5 = input1.cuda(),input2.cuda(),input3.cuda(),input4.cuda(),input5.cuda()
 
         #Forward pass to compute output
-        output = model(input)
+        output = model(input1,input2,input3,input4,input5)
         #Calculate Loss: MSE
         loss = criterion(output, target)
         #Adding loss for current iteration into total_loss
@@ -172,7 +176,6 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     #Avg. total_loss for all the iteration/loss for 1 epoch
     total_loss =  total_loss/(i+1)
 
-    #comment
     print('Epoch: [{0}]\t'
           'Training Loss {loss:.3f}\t'
           'Time: {time:.2f}\t'.format(
@@ -180,7 +183,10 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
     return total_loss, TT
 
-def validate(val_loader, model, criterion, args, test_flag=False):
+
+
+
+def validate(val_loader, model, criterion, args):
 
     # switch to evaluate mode
     model.eval()
@@ -189,28 +195,24 @@ def validate(val_loader, model, criterion, args, test_flag=False):
     #Prevent tracking history,for validation.
     with torch.no_grad():
 
-        for i, (input, target) in enumerate(val_loader):
+        for i, (input1,input2,input3,input4,input5, target) in enumerate(val_loader):
 
             target = target.float()
-            input = input.float()
+            input1,input2,input3,input4,input5 = input1.float(),input2.float(),input3.float(),input4.float(),input5.float()
             if args.is_cuda:
                 target = target.cuda()
-                input = input.cuda()
+                input1,input2,input3,input4,input5 = input1.cuda(),input2.cuda(),input3.cuda(),input4.cuda(),input5.cuda()
 
             # Forward pass to compute output
-            output = model(input)
+            output = model(input1,input2,input3,input4,input5)
             #Calculate Loss: MSE
             loss = criterion(output, target)
             total_loss += loss
 
 
     total_loss =  total_loss/(i+1)
-    if test_flag:
-        txt = 'Test'
-    else:
-        txt = 'Val'
-    print('{type}: \t'
-          'Loss {loss:.4f}\t'.format(type=txt,loss=total_loss))
+    print('val: \t'
+          'Loss {loss:.4f}\t'.format(loss=total_loss))
 
     return total_loss
 
@@ -218,18 +220,13 @@ def save_checkpoint(state, is_best, args, filename='checkpoint.pth.tar'):
     torch.save(state, os.path.join(args.expr_dir, filename))
     if is_best:
         torch.save(state, os.path.join(args.expr_dir, 'model_best.pth.tar'))
+def load_checkpoint(path, model):
+    checkpoint = torch.load(path)
+    model.load_state_dict(checkpoint['state_dict'])
+    return model
 
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    #data loading
-
-    #kfold cv to get the n_split
-    '''
-    for train_index, test_index in kf.split(X):
-        get train data,val data
-        main(args, train_data, val_data, test_data)
-            '''
-
     best_valid_loss, test_loss_best_val = main(args)
     print("best_valid_loss:", best_valid_loss,  "test_loss_best_val:", test_loss_best_val)
