@@ -45,6 +45,7 @@ def main(args, train_data,valid_data,test_data):
     ### init training and val stuff ###
     #Loss Function
     criterion = nn.MSELoss()
+    train_data,valid_data,test_data = read_combined()
 
     args.num_param = 101
     model_RPPA = Net(args)
@@ -240,6 +241,8 @@ if __name__ == '__main__':
         best_valid_results = []
         test_loss_best_val_results = []
 
+        test_data_RPPA, test_data_Meta, test_data_Mut, test_data_Exp, test_data_CNV = test_data[:,:101],test_data[:,101:181],test_data[:,181:1221],test_data[:,1221:1837],test_data[:,1837:1925]
+        test_data = (torch.tensor(test_data_RPPA), torch.tensor(test_data_Meta), torch.tensor(test_data_Mut), torch.tensor(test_data_Exp), torch.tensor(test_data_CNV),torch.tensor(test_label))
         #In this case text_index is my val_index
         for train_index, test_index in kf.split(train_val_data):
 
@@ -252,13 +255,10 @@ if __name__ == '__main__':
             #Differentiating features and labels
             train_data_RPPA, train_data_Meta, train_data_Mut, train_data_Exp, train_data_CNV = train_data[:,:101],train_data[:,101:181],train_data[:,181:1221],train_data[:,1221:1837],train_data[:,1837:1925]
             valid_data_RPPA, valid_data_Meta, valid_data_Mut, valid_data_Exp, valid_data_CNV = val_data[:,:101],val_data[:,101:181],val_data[:,181:1221],val_data[:,1221:1837],val_data[:,1837:1925]
-            test_data_RPPA, test_data_Meta, test_data_Mut, test_data_Exp, test_data_CNV = test_data[:,:101],test_data[:,101:181],test_data[:,181:1221],test_data[:,1221:1837],test_data[:,1837:1925]
 
-
+        
             train_data = (torch.tensor(train_data_RPPA), torch.tensor(train_data_Meta), torch.tensor(train_data_Mut), torch.tensor(train_data_Exp), torch.tensor(train_data_CNV),torch.tensor(train_label))
             valid_data = (torch.tensor(valid_data_RPPA), torch.tensor(valid_data_Meta), torch.tensor(valid_data_Mut), torch.tensor(valid_data_Exp), torch.tensor(valid_data_CNV),torch.tensor(val_label))
-            test_data = (torch.tensor(test_data_RPPA), torch.tensor(test_data_Meta), torch.tensor(test_data_Mut), torch.tensor(test_data_Exp), torch.tensor(test_data_CNV),torch.tensor(test_label))
-
 
 
             best_valid_loss, test_loss_best_val = main(args, train_data,valid_data,test_data)

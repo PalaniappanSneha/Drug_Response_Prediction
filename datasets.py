@@ -162,7 +162,7 @@ def read_CNV(path='Data/DNN/DNN_Input_CNV.csv', cv = False):
 	return train_data, train_label, valid_data, valid_label, test_data, test_label
 
 
-def read_combined(path='Data/DNN/DNN_Combined_Input_1.csv', cv = False):
+def read_combined(path='Data/DNN/DNN_Combined_Input_1.csv',cv = False):
 	with open(path) as csvfile:
 		comb_reader = csv.reader(csvfile)
 		comb = np.array(list(comb_reader))
