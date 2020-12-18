@@ -21,12 +21,14 @@ def read_RPPA(path='Data/DNN/DNN_Input_RPPA.csv', cv = False):
 	idxs = list(set(idxs)^set(train_idxs))
 	valid_idxs = random.sample(idxs, k=int(0.15*r))
 	test_idxs = list(set(idxs)^set(valid_idxs))
-	#Perform 5-fold cross validation
+
+	#Select K-fold cv or simple holdout
 	if cv:
 		#Using both train and validation data for cross validation
 		train_val_data, test_data = RPPA[np.concatenate([train_idxs, valid_idxs]),:], RPPA[test_idxs,:]
-		train_val_data, train_val_label = train_val_data[:,:101], train_val_data[:,101:]
-		return train_val_data, train_val_label, test_data
+		train_val_data, train_val_label =  train_val_data[:,:101], train_val_data[:,101:]
+		test_data, test_label = test_data[:,:101], test_data[:,101:]
+		return train_val_data, train_val_label, test_data, test_label
 	else:
 		train_data, valid_data, test_data = RPPA[train_idxs,:], RPPA[valid_idxs,:], RPPA[test_idxs,:]
 
@@ -36,7 +38,8 @@ def read_RPPA(path='Data/DNN/DNN_Input_RPPA.csv', cv = False):
 	test_data, test_label = test_data[:,:101], test_data[:,101:]
 	return train_data, train_label, valid_data, valid_label, test_data, test_label
 
-def read_Meta(path='Data/DNN/DNN_Input_Metabolomics.csv'):
+
+def read_Meta(path='Data/DNN/DNN_Input_Metabolomics.csv', cv = False):
 	with open(path) as csvfile:
 		Meta_reader = csv.reader(csvfile)
 		Meta = np.array(list(Meta_reader))
@@ -54,7 +57,9 @@ def read_Meta(path='Data/DNN/DNN_Input_Metabolomics.csv'):
 	if cv:
 		#Using both train and validation data for cross validation
 		train_val_data, test_data = Meta[np.concatenate([train_idxs, valid_idxs]),:], Meta[test_idxs,:]
-		return train_val_data, test_data
+		train_val_data, train_val_label = train_val_data[:,:80], train_val_data[:,80:]
+		test_data, test_label = test_data[:,:80], test_data[:,80:]
+		return train_val_data, train_val_label, test_data, test_label
 	else:
 		train_data, valid_data, test_data = Meta[train_idxs,:], Meta[valid_idxs,:], Meta[test_idxs,:]
 
@@ -64,7 +69,8 @@ def read_Meta(path='Data/DNN/DNN_Input_Metabolomics.csv'):
 	test_data, test_label = test_data[:,:80], test_data[:,80:]
 	return train_data, train_label, valid_data, valid_label, test_data, test_label
 
-def read_Expression(path='Data/DNN/DNN_Input_Expression.csv'):
+
+def read_Expression(path='Data/DNN/DNN_Input_Expression.csv', cv = False):
 	with open(path) as csvfile:
 		exp_reader = csv.reader(csvfile)
 		Exp = np.array(list(exp_reader))
@@ -82,7 +88,9 @@ def read_Expression(path='Data/DNN/DNN_Input_Expression.csv'):
 	if cv:
 		#Using both train and validation data for cross validation
 		train_val_data, test_data = Exp[np.concatenate([train_idxs, valid_idxs]),:], Exp[test_idxs,:]
-		return train_val_data, test_data
+		train_val_data, train_val_label =  train_val_data[:,:616], train_val_data[:,616:]
+		test_data, test_label = test_data[:,:616], test_data[:,616:]
+		return train_val_data, train_val_label, test_data, test_label
 	else:
 		train_data, valid_data, test_data = Exp[train_idxs,:], Exp[valid_idxs,:], Exp[test_idxs,:]
 
@@ -92,7 +100,8 @@ def read_Expression(path='Data/DNN/DNN_Input_Expression.csv'):
 	test_data, test_label = test_data[:,:616], test_data[:,616:]
 	return train_data, train_label, valid_data, valid_label, test_data, test_label
 
-def read_Mutations(path='Data/DNN/DNN_Input_Mutation.csv'):
+
+def read_Mutations(path='Data/DNN/DNN_Input_Mutation.csv', cv = False):
 	with open(path) as csvfile:
 		mut_reader = csv.reader(csvfile)
 		Mut = np.array(list(mut_reader))
@@ -110,7 +119,9 @@ def read_Mutations(path='Data/DNN/DNN_Input_Mutation.csv'):
 	if cv:
 		#Using both train and validation data for cross validation
 		train_val_data, test_data = Mut[np.concatenate([train_idxs, valid_idxs]),:], Mut[test_idxs,:]
-		return train_val_data, test_data
+		train_val_data, train_val_label =  train_val_data[:,:1040], train_val_data[:,1040:]
+		test_data, test_label = test_data[:,:1040], test_data[:,1040:]
+		return train_val_data, train_val_label, test_data, test_label
 	else:
 		train_data, valid_data, test_data = Mut[train_idxs,:], Mut[valid_idxs,:], Mut[test_idxs,:]
 
@@ -120,7 +131,8 @@ def read_Mutations(path='Data/DNN/DNN_Input_Mutation.csv'):
 	test_data, test_label = test_data[:,:1040], test_data[:,1040:]
 	return train_data, train_label, valid_data, valid_label, test_data, test_label
 
-def read_CNV(path='Data/DNN/DNN_Input_CNV.csv'):
+
+def read_CNV(path='Data/DNN/DNN_Input_CNV.csv', cv = False):
 	with open(path) as csvfile:
 		CNV_reader = csv.reader(csvfile)
 		CNV = np.array(list(CNV_reader))
@@ -138,7 +150,9 @@ def read_CNV(path='Data/DNN/DNN_Input_CNV.csv'):
 	if cv:
 		#Using both train and validation data for cross validation
 		train_val_data, test_data = CNV[np.concatenate([train_idxs, valid_idxs]),:], CNV[test_idxs,:]
-		return train_val_data, test_data
+		train_val_data, train_val_label =  train_val_data[:,:88], train_val_data[:,88:]
+		test_data, test_label = test_data[:,:88], test_data[:,88:]
+		return train_val_data, train_val_label, test_data, test_label
 	else:
 		train_data, valid_data, test_data = CNV[train_idxs,:], CNV[valid_idxs,:], CNV[test_idxs,:]
 	#Differentiating features and labels
@@ -147,7 +161,8 @@ def read_CNV(path='Data/DNN/DNN_Input_CNV.csv'):
 	test_data, test_label = test_data[:,:88], test_data[:,88:]
 	return train_data, train_label, valid_data, valid_label, test_data, test_label
 
-def read_combined(path='Data/DNN/DNN_Combined_Input_1.csv'):
+
+def read_combined(path='Data/DNN/DNN_Combined_Input_1.csv', cv = False):
 	with open(path) as csvfile:
 		comb_reader = csv.reader(csvfile)
 		comb = np.array(list(comb_reader))
@@ -161,11 +176,15 @@ def read_combined(path='Data/DNN/DNN_Combined_Input_1.csv'):
 	idxs = list(set(idxs)^set(train_idxs))
 	valid_idxs = random.sample(idxs, k=int(0.15*r))
 	test_idxs = list(set(idxs)^set(valid_idxs))
+
 	#Need to verify
 	if cv:
-		#Using both train and validation data for cross validation
 		train_val_data, test_data = comb[np.concatenate([train_idxs, valid_idxs]),:], comb[test_idxs,:]
-		return train_val_data, test_data
+		train_val_data, train_val_label =  train_val_data[:,:1925], train_val_data[:,1925:]
+		test_data, test_label = test_data[:,:1925], test_data[:,1925:]
+
+		return train_val_data, train_val_label, test_data, test_label
+
 	else:
 		train_data, valid_data, test_data = comb[train_idxs,:], comb[valid_idxs,:], comb[test_idxs,:]
 	#Differentiating features and labels
@@ -173,8 +192,9 @@ def read_combined(path='Data/DNN/DNN_Combined_Input_1.csv'):
 	valid_data_RPPA, valid_data_Meta, valid_data_Mut, valid_data_Exp, valid_data_CNV,valid_label = valid_data[:,:101],valid_data[:,101:181],valid_data[:,181:1221],valid_data[:,1221:1837],valid_data[:,1837:1925],valid_data[:,1925:]
 	test_data_RPPA, test_data_Meta, test_data_Mut, test_data_Exp, test_data_CNV,test_label = test_data[:,:101],test_data[:,101:181],test_data[:,181:1221],test_data[:,1221:1837],test_data[:,1837:1925],test_data[:,1925:]
 
-	return (torch.tensor(train_data_RPPA), torch.tensor(train_data_Meta), torch.tensor(train_data_Mut), torch.tensor(train_data_Exp), torch.tensor(train_data_CNV),torch.tensor(train_label)), (torch.tensor(valid_data_RPPA), torch.tensor(valid_data_Meta), torch.tensor(valid_data_Mut), torch.tensor(valid_data_Exp), torch.tensor(valid_data_CNV),torch.tensor(valid_label)), (torch.tensor(test_data_RPPA), torch.tensor(test_data_Meta), torch.tensor(test_data_Mut), torch.tensor(test_data_Exp), torch.tensor(test_data_CNV),torch.tensor(test_label))
-
+	return (torch.tensor(train_data_RPPA), torch.tensor(train_data_Meta), torch.tensor(train_data_Mut), torch.tensor(train_data_Exp), torch.tensor(train_data_CNV),torch.tensor(train_label)),\
+	 (torch.tensor(valid_data_RPPA), torch.tensor(valid_data_Meta), torch.tensor(valid_data_Mut), torch.tensor(valid_data_Exp), torch.tensor(valid_data_CNV),torch.tensor(valid_label)), \
+	 (torch.tensor(test_data_RPPA), torch.tensor(test_data_Meta), torch.tensor(test_data_Mut), torch.tensor(test_data_Exp), torch.tensor(test_data_CNV),torch.tensor(test_label))
 
 
 if __name__ == '__main__':

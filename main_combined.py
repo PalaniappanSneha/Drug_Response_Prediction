@@ -15,7 +15,9 @@ import argparse
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from sklearn.model_selection import KFold
 torch.manual_seed(10)
+np.random.seed(10)
 
 
 parser = argparse.ArgumentParser(description='Drug Response Prediction')
@@ -28,6 +30,7 @@ parser.add_argument('--esthres', type=int, default=5, help='')
 parser.add_argument('--checkpoint', type=str, default=None, help='path/to/checkpoint.pth.tar')
 parser.add_argument('--data', type=str, default='RPPA', help='')
 parser.add_argument('--expr_dir', type=str, default="experiments/", help='path/to/save_dir')
+parser.add_argument('--cv', action='store_true', help='cross validation') #--cv
 # parser.add_argument('--num_param', type=int, default =101) #Remember to change parameter when reading diff dataset
 
 parser.add_argument('--out_embed', type=int, default=200)
@@ -35,19 +38,13 @@ parser.add_argument('--out_lay2', type=int, default =128)
 parser.add_argument('--out_lay3', type=int, default =64)
 parser.add_argument('--output_dim',type=int, default=24)
 
-
-
 # num_parameter,out_embedding=200,out_layer2=128,out_layer3=32,output_dim=22
 
-
-
-def main(args):
+def main(args, train_data,valid_data,test_data):
 
     ### init training and val stuff ###
     #Loss Function
     criterion = nn.MSELoss()
-
-    train_data, valid_data, test_data = read_combined()
 
     args.num_param = 101
     model_RPPA = Net(args)
@@ -74,7 +71,7 @@ def main(args):
 
     args.is_cuda = torch.cuda.is_available()
 
-    model = Net_combined(args, model_RPPA, model_Meta, model_Mut, model_Exp, model_CNV)     #force model to float and cuda
+    model = Net_combined(args, model_RPPA, model_Meta, model_Mut, model_Exp, model_CNV)
     if args.is_cuda:
         model = model.cuda()
 
@@ -82,8 +79,8 @@ def main(args):
     optimizer = torch.optim.Adam(model.parameters(), args.lr)
 
     train_loader = torch.utils.data.DataLoader(TensorDataset(train_data[0],train_data[1], train_data[2],train_data[3],train_data[4],train_data[5]), batch_size=args.batchSize, shuffle = True,num_workers=0, pin_memory=True)
-    test_loader = torch.utils.data.DataLoader(TensorDataset(valid_data[0],valid_data[1], valid_data[2],valid_data[3],valid_data[4],valid_data[5]), batch_size=args.batchSize, shuffle = True, num_workers=0, pin_memory=True)
-    val_loader = torch.utils.data.DataLoader(TensorDataset(test_data[0],test_data[1], test_data[2],test_data[3],test_data[4],test_data[5]), batch_size=args.batchSize, shuffle = True, num_workers=0, pin_memory=True)
+    val_loader = torch.utils.data.DataLoader(TensorDataset(valid_data[0],valid_data[1], valid_data[2],valid_data[3],valid_data[4],valid_data[5]), batch_size=args.batchSize, shuffle = True, num_workers=0, pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(TensorDataset(test_data[0],test_data[1], test_data[2],test_data[3],test_data[4],test_data[5]), batch_size=args.batchSize, shuffle = True, num_workers=0, pin_memory=True)
 
     ### print options ###
 
@@ -228,5 +225,55 @@ def load_checkpoint(path, model):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    best_valid_loss, test_loss_best_val = main(args)
-    print("best_valid_loss:", best_valid_loss,  "test_loss_best_val:", test_loss_best_val)
+    #1) data loading
+    if args.cv:
+        #train_val_data,test_data - returns 5 features and 1 labe;
+        train_val_data, train_val_label, test_data, test_label = read_combined(cv=args.cv)
+    else:
+        train_data,valid_data,test_data = read_combined(cv=args.cv)
+
+    if args.cv:
+        #2) Perform kfold cross-validation
+        kf = KFold(n_splits=5)
+        kf.get_n_splits(train_val_data)
+
+        best_valid_results = []
+        test_loss_best_val_results = []
+
+        #In this case text_index is my val_index
+        for train_index, test_index in kf.split(train_val_data):
+
+            # print(train_index)
+            # print(test_index)
+
+            train_data, val_data = train_val_data[train_index], train_val_data[test_index]
+            train_label, val_label = train_val_label[train_index], train_val_label[test_index]
+
+            #Differentiating features and labels
+            train_data_RPPA, train_data_Meta, train_data_Mut, train_data_Exp, train_data_CNV = train_data[:,:101],train_data[:,101:181],train_data[:,181:1221],train_data[:,1221:1837],train_data[:,1837:1925]
+            valid_data_RPPA, valid_data_Meta, valid_data_Mut, valid_data_Exp, valid_data_CNV = val_data[:,:101],val_data[:,101:181],val_data[:,181:1221],val_data[:,1221:1837],val_data[:,1837:1925]
+            test_data_RPPA, test_data_Meta, test_data_Mut, test_data_Exp, test_data_CNV = test_data[:,:101],test_data[:,101:181],test_data[:,181:1221],test_data[:,1221:1837],test_data[:,1837:1925]
+
+
+            train_data = (torch.tensor(train_data_RPPA), torch.tensor(train_data_Meta), torch.tensor(train_data_Mut), torch.tensor(train_data_Exp), torch.tensor(train_data_CNV),torch.tensor(train_label))
+            valid_data = (torch.tensor(valid_data_RPPA), torch.tensor(valid_data_Meta), torch.tensor(valid_data_Mut), torch.tensor(valid_data_Exp), torch.tensor(valid_data_CNV),torch.tensor(val_label))
+            test_data = (torch.tensor(test_data_RPPA), torch.tensor(test_data_Meta), torch.tensor(test_data_Mut), torch.tensor(test_data_Exp), torch.tensor(test_data_CNV),torch.tensor(test_label))
+
+
+
+            best_valid_loss, test_loss_best_val = main(args, train_data,valid_data,test_data)
+
+            best_valid_results.append(best_valid_loss)
+            test_loss_best_val_results.append(test_loss_best_val)
+
+        #Get avg. scores obtained across the k-folds
+        best_valid_average = np.mean(best_valid_results)
+        test_loss_best_val_average = np.mean(test_loss_best_val_results)
+
+        print("best_valid_loss_CV_avg:", best_valid_average,  "test_loss_best_val_CV_avg:", test_loss_best_val_average)
+    else:
+        best_valid_loss, test_loss_best_val = main(args, train_data,valid_data,test_data)
+        print("best_valid_loss:", best_valid_loss,  "test_loss_best_val:", test_loss_best_val)
+
+    # best_valid_loss, test_loss_best_val = main(args)
+    # print("best_valid_loss:", best_valid_loss,  "test_loss_best_val:", test_loss_best_val)
