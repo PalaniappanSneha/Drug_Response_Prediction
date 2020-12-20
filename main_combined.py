@@ -16,8 +16,16 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
-torch.manual_seed(10)
-np.random.seed(10)
+# torch.manual_seed(10)
+# np.random.seed(10)
+torch.manual_seed(5)
+torch.cuda.manual_seed(5)
+torch.cuda.manual_seed_all(5)  # if you are using multi-GPU.
+np.random.seed(5)  # Numpy module.
+# random.seed(10)  # Python random module.
+torch.manual_seed(5)
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.deterministic = True
 
 
 parser = argparse.ArgumentParser(description='Drug Response Prediction')
@@ -256,7 +264,7 @@ if __name__ == '__main__':
             train_data_RPPA, train_data_Meta, train_data_Mut, train_data_Exp, train_data_CNV = train_data[:,:101],train_data[:,101:181],train_data[:,181:1221],train_data[:,1221:1837],train_data[:,1837:1925]
             valid_data_RPPA, valid_data_Meta, valid_data_Mut, valid_data_Exp, valid_data_CNV = val_data[:,:101],val_data[:,101:181],val_data[:,181:1221],val_data[:,1221:1837],val_data[:,1837:1925]
 
-        
+
             train_data = (torch.tensor(train_data_RPPA), torch.tensor(train_data_Meta), torch.tensor(train_data_Mut), torch.tensor(train_data_Exp), torch.tensor(train_data_CNV),torch.tensor(train_label))
             valid_data = (torch.tensor(valid_data_RPPA), torch.tensor(valid_data_Meta), torch.tensor(valid_data_Mut), torch.tensor(valid_data_Exp), torch.tensor(valid_data_CNV),torch.tensor(val_label))
 

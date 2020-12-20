@@ -2,8 +2,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-torch.manual_seed(10)
-np.random.seed(10)
+# torch.manual_seed(10)
+# np.random.seed(10)
+
+torch.cuda.manual_seed(5)
+torch.cuda.manual_seed_all(5)  # if you are using multi-GPU.
+np.random.seed(5)  # Numpy module.
+# random.seed(10)  # Python random module.
+torch.manual_seed(5)
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.deterministic = True
 
 class Net(nn.Module):
 
@@ -18,7 +26,7 @@ class Net(nn.Module):
         self.output = nn.Linear(args.out_lay3, args.output_dim)
 
         # Define proportion or neurons to dropout
-        self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(0.25)
 
     #Telling model what to do with the layers
     def forward(self, x, hid_out=False):
@@ -64,8 +72,6 @@ class Net_combined(nn.Module):
 
         return output
 
-
-
         return y
 
 class Net_CNN(nn.Module):
@@ -81,7 +87,7 @@ class Net_CNN(nn.Module):
         self.output = nn.Linear(args.out_lay3, args.output_dim)
 
         # Define proportion or neurons to dropout
-        self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(0.25)
 
     #Telling model what to do with the layers
     def forward(self, x, hid_out=False):

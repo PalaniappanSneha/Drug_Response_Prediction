@@ -16,8 +16,17 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
-torch.manual_seed(10)
-np.random.seed(10)
+# torch.manual_seed(10)
+# np.random.seed(10)
+
+torch.manual_seed(5)
+torch.cuda.manual_seed(5)
+torch.cuda.manual_seed_all(5)  # if you are using multi-GPU.
+np.random.seed(5)  # Numpy module.
+# random.seed(10)  # Python random module.
+torch.manual_seed(5)
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.deterministic = True
 
 
 parser = argparse.ArgumentParser(description='Drug Response Prediction')
@@ -110,7 +119,7 @@ def main(args, train_data, valid_data, test_data,train_label, valid_label, test_
     plt.ylabel('loss')
     plt.xlabel('No. of epochs')
     plt.legend(['train', 'test'], loc='upper right')
-    plt.savefig(os.path.join(args.expr_dir, 'RPPA_hid3_64.png'))
+    plt.savefig(os.path.join(args.expr_dir, 'Meta_8.png'))
 
     return best_valid_loss, test_loss_best_val
 

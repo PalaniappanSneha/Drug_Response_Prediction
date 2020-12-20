@@ -3,8 +3,16 @@ from torch.utils.data import DataLoader, TensorDataset
 import torch
 import numpy as np
 import random
-torch.manual_seed(10)
-np.random.seed(10)
+# torch.manual_seed(10)
+# np.random.seed(10)
+
+torch.cuda.manual_seed(5)
+torch.cuda.manual_seed_all(5)  # if you are using multi-GPU.
+np.random.seed(5)  # Numpy module.
+random.seed(5)  # Python random module.
+torch.manual_seed(5)
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.deterministic = True
 
 
 def read_RPPA(path='Data/DNN/DNN_Input_RPPA.csv', cv = False):
