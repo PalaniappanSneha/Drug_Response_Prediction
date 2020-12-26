@@ -3,8 +3,7 @@ from torch.utils.data import DataLoader, TensorDataset
 import torch
 import numpy as np
 import random
-# torch.manual_seed(10)
-# np.random.seed(10)
+
 
 torch.cuda.manual_seed(5)
 torch.cuda.manual_seed_all(5)  # if you are using multi-GPU.
@@ -169,8 +168,36 @@ def read_CNV(path='Data/DNN/DNN_Input_CNV.csv', cv = False):
 	test_data, test_label = test_data[:,:88], test_data[:,88:]
 	return train_data, train_label, valid_data, valid_label, test_data, test_label
 
+def read_miRNA(path='Data/DNN/DNN_Input_miRNA.csv', cv = False):
+	with open(path) as csvfile:
+		miRNA_reader = csv.reader(csvfile)
+		miRNA = np.array(list(miRNA_reader))
+		miRNA = miRNA[1:,1:] #Ignoring the first column(label)
+		miRNA = miRNA.astype(float)
 
-def read_combined(path='Data/DNN/DNN_Combined_Input_1.csv',cv = False):
+	r,c = miRNA.shape
+	#Split data into train,validation,test data (using indexes)
+	idxs = list(range(r))
+	train_idxs = random.sample(idxs, k=int(0.70*r))
+	idxs = list(set(idxs)^set(train_idxs))
+	valid_idxs = random.sample(idxs, k=int(0.15*r))
+	test_idxs = list(set(idxs)^set(valid_idxs))
+
+	if cv:
+		#Using both train and validation data for cross validation
+		train_val_data, test_data = miRNA[np.concatenate([train_idxs, valid_idxs]),:], miRNA[test_idxs,:]
+		train_val_data, train_val_label =  train_val_data[:,:197], train_val_data[:,197:]
+		test_data, test_label = test_data[:,:197], test_data[:,197:]
+		return train_val_data, train_val_label, test_data, test_label
+	else:
+		train_data, valid_data, test_data = miRNA[train_idxs,:], miRNA[valid_idxs,:], miRNA[test_idxs,:]
+	#Differentiating features and labels
+	train_data, train_label = train_data[:,:197], train_data[:,197:]
+	valid_data, valid_label = valid_data[:,:197], valid_data[:,197:]
+	test_data, test_label = test_data[:,:197], test_data[:,197:]
+	return train_data, train_label, valid_data, valid_label, test_data, test_label
+
+def read_combined(path='Data/DNN/DNN_Combined_Input_2.csv',cv = False):
 	with open(path) as csvfile:
 		comb_reader = csv.reader(csvfile)
 		comb = np.array(list(comb_reader))
@@ -188,26 +215,60 @@ def read_combined(path='Data/DNN/DNN_Combined_Input_1.csv',cv = False):
 	#Need to verify
 	if cv:
 		train_val_data, test_data = comb[np.concatenate([train_idxs, valid_idxs]),:], comb[test_idxs,:]
-		train_val_data, train_val_label =  train_val_data[:,:1925], train_val_data[:,1925:]
-		test_data, test_label = test_data[:,:1925], test_data[:,1925:]
+		train_val_data, train_val_label =  train_val_data[:,:2122], train_val_data[:,2122:]
+		test_data, test_label = test_data[:,:2122], test_data[:,2122:]
 
 		return train_val_data, train_val_label, test_data, test_label
 
 	else:
 		train_data, valid_data, test_data = comb[train_idxs,:], comb[valid_idxs,:], comb[test_idxs,:]
 	#Differentiating features and labels
-	train_data_RPPA, train_data_Meta, train_data_Mut, train_data_Exp, train_data_CNV,train_label = train_data[:,:101],train_data[:,101:181],train_data[:,181:1221],train_data[:,1221:1837],train_data[:,1837:1925],train_data[:,1925:]
-	valid_data_RPPA, valid_data_Meta, valid_data_Mut, valid_data_Exp, valid_data_CNV,valid_label = valid_data[:,:101],valid_data[:,101:181],valid_data[:,181:1221],valid_data[:,1221:1837],valid_data[:,1837:1925],valid_data[:,1925:]
-	test_data_RPPA, test_data_Meta, test_data_Mut, test_data_Exp, test_data_CNV,test_label = test_data[:,:101],test_data[:,101:181],test_data[:,181:1221],test_data[:,1221:1837],test_data[:,1837:1925],test_data[:,1925:]
+	train_data_RPPA,  train_data_miRNA, train_data_Meta, train_data_Mut, train_data_Exp, train_data_CNV,train_label = train_data[:,:101],train_data[:,101:298],train_data[:,298:378],train_data[:,378:1418],train_data[:,1418:2034],train_data[:,2034:2122],train_data[:,2122:]
+	valid_data_RPPA, valid_data_miRNA, valid_data_Meta,  valid_data_Mut, valid_data_Exp, valid_data_CNV,valid_label = valid_data[:,:101],valid_data[:,101:298],valid_data[:,298:378],valid_data[:,378:1418],valid_data[:,1418:2034],valid_data[:,2034:2122],valid_data[:,2122:]
+	test_data_RPPA, test_data_miRNA, test_data_Meta,  test_data_Mut, test_data_Exp, test_data_CNV,test_label = test_data[:,:101],test_data[:,101:298],test_data[:,298:378],test_data[:,378:1418],test_data[:,1418:2034],test_data[:,2034:2122],test_data[:,2122:]
 
-	return (torch.tensor(train_data_RPPA), torch.tensor(train_data_Meta), torch.tensor(train_data_Mut), torch.tensor(train_data_Exp), torch.tensor(train_data_CNV),torch.tensor(train_label)),\
-	 (torch.tensor(valid_data_RPPA), torch.tensor(valid_data_Meta), torch.tensor(valid_data_Mut), torch.tensor(valid_data_Exp), torch.tensor(valid_data_CNV),torch.tensor(valid_label)), \
-	 (torch.tensor(test_data_RPPA), torch.tensor(test_data_Meta), torch.tensor(test_data_Mut), torch.tensor(test_data_Exp), torch.tensor(test_data_CNV),torch.tensor(test_label))
-
+	return (torch.tensor(train_data_RPPA), torch.tensor(train_data_miRNA), torch.tensor(train_data_Meta), torch.tensor(train_data_Mut), torch.tensor(train_data_Exp), torch.tensor(train_data_CNV),torch.tensor(train_label)),\
+	 (torch.tensor(valid_data_RPPA), torch.tensor(valid_data_miRNA), torch.tensor(valid_data_Meta), torch.tensor(valid_data_Mut), torch.tensor(valid_data_Exp), torch.tensor(valid_data_CNV),torch.tensor(valid_label)), \
+	 (torch.tensor(test_data_RPPA), torch.tensor(test_data_miRNA), torch.tensor(test_data_Meta), torch.tensor(test_data_Mut), torch.tensor(test_data_Exp), torch.tensor(test_data_CNV),torch.tensor(test_label))
+#read_combined for 5 datasets
+# def read_combined(path='Data/DNN/DNN_Combined_Input_1.csv',cv = False):
+# 	with open(path) as csvfile:
+# 		comb_reader = csv.reader(csvfile)
+# 		comb = np.array(list(comb_reader))
+# 		comb = comb[1:,1:] #Ignoring the first column(label)
+# 		comb = comb.astype(float)
+#
+# 	r,c = comb.shape
+# 	#Split data into train,validation,test data (using indexes)
+# 	idxs = list(range(r))
+# 	train_idxs = random.sample(idxs, k=int(0.70*r))
+# 	idxs = list(set(idxs)^set(train_idxs))
+# 	valid_idxs = random.sample(idxs, k=int(0.15*r))
+# 	test_idxs = list(set(idxs)^set(valid_idxs))
+#
+# 	#Need to verify
+# 	if cv:
+# 		train_val_data, test_data = comb[np.concatenate([train_idxs, valid_idxs]),:], comb[test_idxs,:]
+# 		train_val_data, train_val_label =  train_val_data[:,:1925], train_val_data[:,1925:]
+# 		test_data, test_label = test_data[:,:1925], test_data[:,1925:]
+#
+# 		return train_val_data, train_val_label, test_data, test_label
+#
+# 	else:
+# 		train_data, valid_data, test_data = comb[train_idxs,:], comb[valid_idxs,:], comb[test_idxs,:]
+# 	#Differentiating features and labels
+# 	train_data_RPPA, train_data_Meta, train_data_Mut, train_data_Exp, train_data_CNV,train_label = train_data[:,:101],train_data[:,101:181],train_data[:,181:1221],train_data[:,1221:1837],train_data[:,1837:1925],train_data[:,1925:]
+# 	valid_data_RPPA, valid_data_Meta, valid_data_Mut, valid_data_Exp, valid_data_CNV,valid_label = valid_data[:,:101],valid_data[:,101:181],valid_data[:,181:1221],valid_data[:,1221:1837],valid_data[:,1837:1925],valid_data[:,1925:]
+# 	test_data_RPPA, test_data_Meta, test_data_Mut, test_data_Exp, test_data_CNV,test_label = test_data[:,:101],test_data[:,101:181],test_data[:,181:1221],test_data[:,1221:1837],test_data[:,1837:1925],test_data[:,1925:]
+#
+# 	return (torch.tensor(train_data_RPPA), torch.tensor(train_data_Meta), torch.tensor(train_data_Mut), torch.tensor(train_data_Exp), torch.tensor(train_data_CNV),torch.tensor(train_label)),\
+# 	 (torch.tensor(valid_data_RPPA), torch.tensor(valid_data_Meta), torch.tensor(valid_data_Mut), torch.tensor(valid_data_Exp), torch.tensor(valid_data_CNV),torch.tensor(valid_label)), \
+# 	 (torch.tensor(test_data_RPPA), torch.tensor(test_data_Meta), torch.tensor(test_data_Mut), torch.tensor(test_data_Exp), torch.tensor(test_data_CNV),torch.tensor(test_label))
+#
 
 if __name__ == '__main__':
 	#read_RPPA returns 6 things
-	data = read_RPPA() #just replace this with read_...
+	data = read_miRNA() #just replace this with read_...
 	#Check training features and label shape
 	print(data[0][0].shape, data[1][0].shape)
 	#Convert to tensors

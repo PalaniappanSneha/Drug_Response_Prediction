@@ -42,7 +42,7 @@ parser.add_argument('--cv', action='store_true', help='cross validation') #--cv
 # parser.add_argument('--num_param', type=int, default =101) #Remember to change parameter when reading diff dataset
 
 parser.add_argument('--out_embed', type=int, default=200)
-parser.add_argument('--out_lay2', type=int, default =128)
+# parser.add_argument('--out_lay2', type=int, default =128)
 parser.add_argument('--out_lay3', type=int, default =64)
 parser.add_argument('--output_dim',type=int, default=24)
 
@@ -56,40 +56,54 @@ def main(args, train_data,valid_data,test_data):
     train_data,valid_data,test_data = read_combined()
 
     args.num_param = 101
+    args.out_embed = 101
     model_RPPA = Net(args)
+    #model_RPPA = Net_CNN(args)
     model_RPPA = load_checkpoint('experiments/RPPA/model_best.pth.tar', model_RPPA)
 
+    args.num_param = 197
+    args.out_embed = 197
+    model_miRNA = Net(args)
+    #model_miRNA = Net_CNN(args)
+    model_miRNA = load_checkpoint('experiments/miRNA/model_best.pth.tar', model_miRNA) #create folder
 
     args.num_param = 80
+    args.out_embed = 80
     model_Meta = Net(args)
+    #model_Meta = Net_CNN(args)
     model_Meta = load_checkpoint('experiments/Meta/model_best.pth.tar', model_Meta)
 
-
     args.num_param = 1040
+    args.out_embed = 1040
     model_Mut = Net(args)
+    #model_Mut = Net_CNN(args)
     model_Mut = load_checkpoint('experiments/Mut/model_best.pth.tar', model_Mut)
 
+    args.num_param = 616
+    args.out_embed = 616
+    model_Exp = Net(args)
+    #model_Exp = Net_CNN(args)
+    model_Exp = load_checkpoint('experiments/Exp/model_best.pth.tar', model_Exp)
 
     args.num_param = 88
+    args.out_embed = 88
     model_CNV = Net(args)
+    #model_CNV = Net_CNN(args)
     model_CNV = load_checkpoint('experiments/CNV/model_best.pth.tar', model_CNV)
 
-    args.num_param = 616
-    model_Exp = Net(args)
-    model_Exp = load_checkpoint('experiments/Exp/model_best.pth.tar', model_Exp)
 
     args.is_cuda = torch.cuda.is_available()
 
-    model = Net_combined(args, model_RPPA, model_Meta, model_Mut, model_Exp, model_CNV)
+    model = Net_combined(args, model_RPPA, model_miRNA, model_Meta, model_Mut, model_Exp, model_CNV)
     if args.is_cuda:
         model = model.cuda()
 
     #Adam optimizer
     optimizer = torch.optim.Adam(model.parameters(), args.lr)
 
-    train_loader = torch.utils.data.DataLoader(TensorDataset(train_data[0],train_data[1], train_data[2],train_data[3],train_data[4],train_data[5]), batch_size=args.batchSize, shuffle = True,num_workers=0, pin_memory=True)
-    val_loader = torch.utils.data.DataLoader(TensorDataset(valid_data[0],valid_data[1], valid_data[2],valid_data[3],valid_data[4],valid_data[5]), batch_size=args.batchSize, shuffle = True, num_workers=0, pin_memory=True)
-    test_loader = torch.utils.data.DataLoader(TensorDataset(test_data[0],test_data[1], test_data[2],test_data[3],test_data[4],test_data[5]), batch_size=args.batchSize, shuffle = True, num_workers=0, pin_memory=True)
+    train_loader = torch.utils.data.DataLoader(TensorDataset(train_data[0],train_data[1], train_data[2],train_data[3],train_data[4],train_data[5],train_data[6]), batch_size=args.batchSize, shuffle = True,num_workers=0, pin_memory=True)
+    val_loader = torch.utils.data.DataLoader(TensorDataset(valid_data[0],valid_data[1], valid_data[2],valid_data[3],valid_data[4],valid_data[5],valid_data[6]), batch_size=args.batchSize, shuffle = True, num_workers=0, pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(TensorDataset(test_data[0],test_data[1], test_data[2],test_data[3],test_data[4],test_data[5], test_data[6]), batch_size=args.batchSize, shuffle = True, num_workers=0, pin_memory=True)
 
     ### print options ###
 
@@ -156,17 +170,17 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     stime = time.time()
     #Updating the parameters each iteration. (# of iterations = # batches)
     #Each iteration: 1)Forward Propogation 2)Compute Costs 3)Backpropagation 4)Update parameters
-    for i, (input1,input2,input3,input4,input5, target) in enumerate(train_loader):
+    for i, (input1,input2,input3,input4,input5,input6, target) in enumerate(train_loader):
         # measure data loading time
         #???
         target = target.float()
-        input1,input2,input3,input4,input5 = input1.float(),input2.float(),input3.float(),input4.float(),input5.float()
+        input1,input2,input3,input4,input5,input6 = input1.float(),input2.float(),input3.float(),input4.float(),input5.float(),input6.float()
         if args.is_cuda:
             target = target.cuda()
-            input1,input2,input3,input4,input5 = input1.cuda(),input2.cuda(),input3.cuda(),input4.cuda(),input5.cuda()
+            input1,input2,input3,input4,input5,input6 = input1.cuda(),input2.cuda(),input3.cuda(),input4.cuda(),input5.cuda(),input6.cuda()
 
         #Forward pass to compute output
-        output = model(input1,input2,input3,input4,input5)
+        output = model(input1,input2,input3,input4,input5,input6)
         #Calculate Loss: MSE
         loss = criterion(output, target)
         #Adding loss for current iteration into total_loss
@@ -201,16 +215,16 @@ def validate(val_loader, model, criterion, args):
     #Prevent tracking history,for validation.
     with torch.no_grad():
 
-        for i, (input1,input2,input3,input4,input5, target) in enumerate(val_loader):
+        for i, (input1,input2,input3,input4,input5,input6, target) in enumerate(val_loader):
 
             target = target.float()
-            input1,input2,input3,input4,input5 = input1.float(),input2.float(),input3.float(),input4.float(),input5.float()
+            input1,input2,input3,input4,input5,input6 = input1.float(),input2.float(),input3.float(),input4.float(),input5.float(),input6.float()
             if args.is_cuda:
                 target = target.cuda()
-                input1,input2,input3,input4,input5 = input1.cuda(),input2.cuda(),input3.cuda(),input4.cuda(),input5.cuda()
+                input1,input2,input3,input4,input5,input6 = input1.cuda(),input2.cuda(),input3.cuda(),input4.cuda(),input5.cuda(), input6.cuda()
 
             # Forward pass to compute output
-            output = model(input1,input2,input3,input4,input5)
+            output = model(input1,input2,input3,input4,input5,input6)
             #Calculate Loss: MSE
             loss = criterion(output, target)
             total_loss += loss
@@ -243,14 +257,14 @@ if __name__ == '__main__':
 
     if args.cv:
         #2) Perform kfold cross-validation
-        kf = KFold(n_splits=5)
+        kf = KFold(n_splits=3)
         kf.get_n_splits(train_val_data)
 
         best_valid_results = []
         test_loss_best_val_results = []
 
-        test_data_RPPA, test_data_Meta, test_data_Mut, test_data_Exp, test_data_CNV = test_data[:,:101],test_data[:,101:181],test_data[:,181:1221],test_data[:,1221:1837],test_data[:,1837:1925]
-        test_data = (torch.tensor(test_data_RPPA), torch.tensor(test_data_Meta), torch.tensor(test_data_Mut), torch.tensor(test_data_Exp), torch.tensor(test_data_CNV),torch.tensor(test_label))
+        test_data_RPPA, test_data_miRNA, test_data_Meta,  test_data_Mut, test_data_Exp, test_data_CNV = test_data[:,:101],test_data[:,101:298],test_data[:,298:378],test_data[:,378:1418],test_data[:,1418:2034],test_data[:,2034:2122]
+        test_data =  (torch.tensor(test_data_RPPA), torch.tensor(test_data_miRNA), torch.tensor(test_data_Meta), torch.tensor(test_data_Mut), torch.tensor(test_data_Exp), torch.tensor(test_data_CNV),torch.tensor(test_label))
         #In this case text_index is my val_index
         for train_index, test_index in kf.split(train_val_data):
 
@@ -261,12 +275,13 @@ if __name__ == '__main__':
             train_label, val_label = train_val_label[train_index], train_val_label[test_index]
 
             #Differentiating features and labels
-            train_data_RPPA, train_data_Meta, train_data_Mut, train_data_Exp, train_data_CNV = train_data[:,:101],train_data[:,101:181],train_data[:,181:1221],train_data[:,1221:1837],train_data[:,1837:1925]
-            valid_data_RPPA, valid_data_Meta, valid_data_Mut, valid_data_Exp, valid_data_CNV = val_data[:,:101],val_data[:,101:181],val_data[:,181:1221],val_data[:,1221:1837],val_data[:,1837:1925]
 
 
-            train_data = (torch.tensor(train_data_RPPA), torch.tensor(train_data_Meta), torch.tensor(train_data_Mut), torch.tensor(train_data_Exp), torch.tensor(train_data_CNV),torch.tensor(train_label))
-            valid_data = (torch.tensor(valid_data_RPPA), torch.tensor(valid_data_Meta), torch.tensor(valid_data_Mut), torch.tensor(valid_data_Exp), torch.tensor(valid_data_CNV),torch.tensor(val_label))
+            train_data_RPPA,  train_data_miRNA, train_data_Meta, train_data_Mut, train_data_Exp, train_data_CNV = train_data[:,:101],train_data[:,101:298],train_data[:,298:378],train_data[:,378:1418],train_data[:,1418:2034],train_data[:,2034:2122]
+            valid_data_RPPA, valid_data_miRNA, valid_data_Meta,  valid_data_Mut, valid_data_Exp, valid_data_CNV = val_data[:,:101],val_data[:,101:298],val_data[:,298:378],val_data[:,378:1418],val_data[:,1418:2034],val_data[:,2034:2122]
+
+            train_data =  (torch.tensor(train_data_RPPA), torch.tensor(train_data_miRNA), torch.tensor(train_data_Meta), torch.tensor(train_data_Mut), torch.tensor(train_data_Exp), torch.tensor(train_data_CNV),torch.tensor(train_label))
+            valid_data =  (torch.tensor(valid_data_RPPA), torch.tensor(valid_data_miRNA), torch.tensor(valid_data_Meta), torch.tensor(valid_data_Mut), torch.tensor(valid_data_Exp), torch.tensor(valid_data_CNV),torch.tensor(val_label))
 
 
             best_valid_loss, test_loss_best_val = main(args, train_data,valid_data,test_data)
