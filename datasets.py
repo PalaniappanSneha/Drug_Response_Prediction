@@ -24,9 +24,9 @@ def read_RPPA(path='Data/DNN/DNN_Input_RPPA.csv', cv = False):
 	r,c = RPPA.shape
 	#Split data into train,validation,test data (using indexes)
 	idxs = list(range(r))
-	train_idxs = random.sample(idxs, k=int(0.70*r))
+	train_idxs = random.sample(idxs, k=int(0.80*r))
 	idxs = list(set(idxs)^set(train_idxs))
-	valid_idxs = random.sample(idxs, k=int(0.15*r))
+	valid_idxs = random.sample(idxs, k=int(0.10*r))
 	test_idxs = list(set(idxs)^set(valid_idxs))
 
 	#Select K-fold cv or simple holdout
@@ -56,9 +56,9 @@ def read_Meta(path='Data/DNN/DNN_Input_Metabolomics.csv', cv = False):
 	r,c = Meta.shape
 	#Split data into train,validation,test data (using indexes)
 	idxs = list(range(r))
-	train_idxs = random.sample(idxs, k=int(0.70*r))
+	train_idxs = random.sample(idxs, k=int(0.80*r))
 	idxs = list(set(idxs)^set(train_idxs))
-	valid_idxs = random.sample(idxs, k=int(0.15*r))
+	valid_idxs = random.sample(idxs, k=int(0.10*r))
 	test_idxs = list(set(idxs)^set(valid_idxs))
 
 	if cv:
@@ -87,9 +87,9 @@ def read_Expression(path='Data/DNN/DNN_Input_Expression.csv', cv = False):
 	r,c = Exp.shape
 	#Split data into train,validation,test data (using indexes)
 	idxs = list(range(r))
-	train_idxs = random.sample(idxs, k=int(0.70*r))
+	train_idxs = random.sample(idxs, k=int(0.80*r))
 	idxs = list(set(idxs)^set(train_idxs))
-	valid_idxs = random.sample(idxs, k=int(0.15*r))
+	valid_idxs = random.sample(idxs, k=int(0.10*r))
 	test_idxs = list(set(idxs)^set(valid_idxs))
 
 	if cv:
@@ -118,9 +118,9 @@ def read_Mutations(path='Data/DNN/DNN_Input_Mutation.csv', cv = False):
 	r,c = Mut.shape
 	#Split data into train,validation,test data (using indexes)
 	idxs = list(range(r))
-	train_idxs = random.sample(idxs, k=int(0.70*r))
+	train_idxs = random.sample(idxs, k=int(0.80*r))
 	idxs = list(set(idxs)^set(train_idxs))
-	valid_idxs = random.sample(idxs, k=int(0.15*r))
+	valid_idxs = random.sample(idxs, k=int(0.10*r))
 	test_idxs = list(set(idxs)^set(valid_idxs))
 
 	if cv:
@@ -149,9 +149,9 @@ def read_CNV(path='Data/DNN/DNN_Input_CNV.csv', cv = False):
 	r,c = CNV.shape
 	#Split data into train,validation,test data (using indexes)
 	idxs = list(range(r))
-	train_idxs = random.sample(idxs, k=int(0.70*r))
+	train_idxs = random.sample(idxs, k=int(0.80*r))
 	idxs = list(set(idxs)^set(train_idxs))
-	valid_idxs = random.sample(idxs, k=int(0.15*r))
+	valid_idxs = random.sample(idxs, k=int(0.10*r))
 	test_idxs = list(set(idxs)^set(valid_idxs))
 
 	if cv:
@@ -178,9 +178,9 @@ def read_miRNA(path='Data/DNN/DNN_Input_miRNA.csv', cv = False):
 	r,c = miRNA.shape
 	#Split data into train,validation,test data (using indexes)
 	idxs = list(range(r))
-	train_idxs = random.sample(idxs, k=int(0.70*r))
+	train_idxs = random.sample(idxs, k=int(0.80*r))
 	idxs = list(set(idxs)^set(train_idxs))
-	valid_idxs = random.sample(idxs, k=int(0.15*r))
+	valid_idxs = random.sample(idxs, k=int(0.10*r))
 	test_idxs = list(set(idxs)^set(valid_idxs))
 
 	if cv:
@@ -207,9 +207,9 @@ def read_combined(path='Data/DNN/DNN_Combined_Input_2.csv',cv = False):
 	r,c = comb.shape
 	#Split data into train,validation,test data (using indexes)
 	idxs = list(range(r))
-	train_idxs = random.sample(idxs, k=int(0.70*r))
+	train_idxs = random.sample(idxs, k=int(0.80*r))
 	idxs = list(set(idxs)^set(train_idxs))
-	valid_idxs = random.sample(idxs, k=int(0.15*r))
+	valid_idxs = random.sample(idxs, k=int(0.10*r))
 	test_idxs = list(set(idxs)^set(valid_idxs))
 
 	#Need to verify
@@ -241,9 +241,9 @@ def read_combined(path='Data/DNN/DNN_Combined_Input_2.csv',cv = False):
 # 	r,c = comb.shape
 # 	#Split data into train,validation,test data (using indexes)
 # 	idxs = list(range(r))
-# 	train_idxs = random.sample(idxs, k=int(0.70*r))
+# 	train_idxs = random.sample(idxs, k=int(0.80*r))
 # 	idxs = list(set(idxs)^set(train_idxs))
-# 	valid_idxs = random.sample(idxs, k=int(0.15*r))
+# 	valid_idxs = random.sample(idxs, k=int(0.20*r))
 # 	test_idxs = list(set(idxs)^set(valid_idxs))
 #
 # 	#Need to verify
