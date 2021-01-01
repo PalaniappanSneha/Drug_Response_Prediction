@@ -30,7 +30,7 @@ parser = argparse.ArgumentParser(description='Drug Response Prediction')
 parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
 parser.add_argument('--epoch', type=int, default=500, help='number of epochs')
 parser.add_argument('--lr', type=float, default=0.01, help='initial learning rate')
-parser.add_argument('--esthres', type=int, default=10, help='')
+parser.add_argument('--esthres', type=int, default=20, help='')
 # parser.add_argument('--est', type=int, default=30, help='early_stopping_threshold')
 
 parser.add_argument('--checkpoint', type=str, default=None, help='path/to/checkpoint.pth.tar')
@@ -40,7 +40,7 @@ parser.add_argument('--expr_dir', type=str, default="experiments/", help='path/t
 parser.add_argument('--cv', action='store_true', help='cross validation') #--cv
 # parser.add_argument('--num_param', type=int, default =101)
 parser.add_argument('--out_embed', type=int, default=200)
-# parser.add_argument('--out_lay2', type=int, default =128)
+parser.add_argument('--out_lay2', type=int, default =128)
 parser.add_argument('--out_lay3', type=int, default =64)
 parser.add_argument('--output_dim',type=int, default=24)
 parser.add_argument('--dropout',type=float, default=0)
@@ -145,6 +145,8 @@ def main(args, train_data, valid_data, test_data,train_label, valid_label, test_
             count = 0
             best_valid_loss = epoch_val_loss
             test_loss_best_val = epoch_test_loss
+            best_train_loss = epoch_total_loss
+
             test_r_square_best_valid = r_square_test
 
             save_checkpoint(state, True, args)
@@ -152,8 +154,10 @@ def main(args, train_data, valid_data, test_data,train_label, valid_label, test_
             count = count + 1
             if(count >= args.esthres):
                 break
-    print(r_square_train)
-    print(r_square_test)
+
+    # print(r_square_train)
+    # print(r_square_test)
+
     #Calc mean r_square (for total epochs)
     avg_test_r_square = np.mean(all_test_r_square)
     avg_valid_r_square = np.mean(all_valid_r_square)
@@ -172,10 +176,10 @@ def main(args, train_data, valid_data, test_data,train_label, valid_label, test_
     plt.ylabel('loss')
     plt.xlabel('No. of epochs')
     plt.legend(['train', 'test'], loc='upper right')
-    plt.savefig(os.path.join(args.expr_dir, 'combined_CNN.png'))
+    plt.savefig(os.path.join(args.expr_dir, 'miRNA_16_DNN_20.png'))
 
     # return best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square
-    return best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test
+    return best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test, best_train_loss
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
     total_loss = 0.0
@@ -235,7 +239,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
           'r_square: {r2}\t'
           'accuracy: {acc}\t'
           'topkaccuracy:{kacc}\t'
-          'f1_score: {f1}'.format(
+          'f1_score: {f1}\t'.format(
            epoch, loss=total_loss, time= TT, r2=r_square, acc=accuracy, kacc = topkaccuracy, f1 = f1))
 
     return total_loss, TT, r_square
@@ -286,7 +290,7 @@ def validate(val_loader, model, criterion, args, test_flag=False):
         txt = 'Test'
     else:
         txt = 'Val'
-    #DO FOR COMBINED AND NEED TO DO AS SUCH PRINT ONLY FOR TEST
+
     if args.verbose:
         print('{type}: \t'
           'Loss {loss:.4f}\t'
@@ -295,7 +299,6 @@ def validate(val_loader, model, criterion, args, test_flag=False):
           'topkaccuracy:{kacc}\t'
           'f1_score: {f1}'.format(
            type=txt,loss=total_loss, r2=r_square, acc=accuracy, kacc = topkaccuracy, f1 = f1))
-
 
     # if args.verbose:
     #     print('{type}: \t'
@@ -385,7 +388,7 @@ if __name__ == '__main__':
             train_data, val_data = train_val_data[train_index], train_val_data[test_index]
             train_label, val_label = train_val_label[train_index], train_val_label[test_index]
 
-            best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test = main(args, train_data, val_data, test_data, train_label, val_label, test_label)
+            best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test, best_train_loss = main(args, train_data, val_data, test_data, train_label, val_label, test_label)
 
             best_valid_results.append(best_valid_loss)
             test_loss_best_val_results.append(test_loss_best_val)
@@ -412,6 +415,6 @@ if __name__ == '__main__':
         # print("best_valid_loss_CV_avg:", best_valid_average,  "test_loss_best_val_CV_avg:", test_loss_best_val_average,"best_test_r2_average:", test_r2_average_cv, "best_test_r2_std:", test_r2_std_cv) #?shud be just r2 avg. not best_test_r2 avg?
         print("best_valid_loss_CV_avg:", best_valid_average,  "test_loss_best_val_CV_avg:", test_loss_best_val_average,"best_test_r2_average:", test_r2_average_cv, "best_test_r2_std:", test_r2_std_cv, "mean_r2_test", mean_r2_test, "std_r2_test", std_r2_test, "std_mse",std_mse_test)
     else:
-        best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test = main(args, train_data, valid_data, test_data, train_label, valid_label, test_label)
+        best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test, best_train_loss = main(args, train_data, valid_data, test_data, train_label, valid_label, test_label)
         # print("best_valid_loss:", best_valid_loss,  "test_loss_best_val:", test_loss_best_val, "best_test_r2_average:", avg_test_r_square, "best_test_r2_std:", std_test_r_square)
-        print("best_valid_loss:", best_valid_loss,  "test_loss_best_val:", test_loss_best_val, "best_test_r2_average:", avg_test_r_square, "best_test_r2_std:", std_test_r_square, "max_r2_train:", max_r2_train, "max_r2_test", max_r2_test)
+        print("best_train_loss", best_train_loss,"best_valid_loss:", best_valid_loss,  "test_loss_best_val:", test_loss_best_val, "best_test_r2_average:", avg_test_r_square, "best_test_r2_std:", std_test_r_square, "max_r2_train:", max_r2_train, "max_r2_test", max_r2_test)
