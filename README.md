@@ -13,7 +13,7 @@ Flow of codes and project:
 5) datasets.py
    - Read data 
 6) model.py 
-   - specifications of model
+   - Specifications of model
 7) main.py
    - Individual DNN
 8) main_combined.py 
