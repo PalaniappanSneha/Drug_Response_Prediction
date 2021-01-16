@@ -12,14 +12,13 @@ torch.manual_seed(5)
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.deterministic = True
 
-#For single layer hidden model comment lines 44 and 45 in model.py, line 47 in main_combined.py, line 43 in main.py.
+#For single layer hidden model comment lines 43 and 44 in model.py, line 46 in main_combined.py, line 43 in main.py.
 
 class Net(nn.Module):
 
     def __init__(self, args):
         super(Net, self).__init__()
         # Telling what are the specifications of the model
-        # num_parameter,out_embedding=200,out_layer2=128,out_layer3=64,output_dim=24
         #self.fc1 = nn.Linear(input, output)
 
         #1 Hidden Layer Model
@@ -29,7 +28,7 @@ class Net(nn.Module):
         # self.output = nn.Linear(args.out_lay3, args.output_dim)
 
         #2 Hidden Layer Model
-        self.embedding = nn.Linear(args.num_param, args.out_embed)
+        self.embedding = nn.Linear(args.num_param, args.out_embed) #PCA layer
         self.layer2 = nn.Linear(args.out_embed, args.out_lay2)
         self.layer3 = nn.Linear(args.out_lay2, args.out_lay3)
         self.output = nn.Linear(args.out_lay3, args.output_dim)
@@ -50,6 +49,7 @@ class Net(nn.Module):
         y = self.output(y)
 
         return y
+
 
 class Net_combined(nn.Module):
 
@@ -78,12 +78,9 @@ class Net_combined(nn.Module):
             p.requires_grad = False #comment until here to try
         self.out_lay3 = args.out_lay3
 
-        # self.output = nn.Linear(args.out_lay3*6, args.output_dim)
-        # self.attention_weight = nn.Parameter(torch.FloatTensor( args.out_lay3*6,6))old
-        # self.attention_weight = nn.Parameter(torch.ones(args.out_lay3*6, 6))new, working combined, ch help
-
         self.output = nn.Linear(self.out_lay3*6, args.output_dim)
-        self.attention_weight = nn.Linear(args.out_lay3, 6)
+        #Attention Layer
+        self.attention_weight = nn.Linear(args.out_lay3, 6) # bs x 6
 
     #Telling model what to do with the layers
     def forward(self, x1,x2,x3,x4,x5,x6): #model_RPPA, model_Meta, model_Mut, model_Exp, model_CNV,model_miRNA
@@ -97,16 +94,16 @@ class Net_combined(nn.Module):
         y=torch.cat([y1,y2,y3,y4,y5,y6],dim=-1) # bs x 384
         # print(y.shape)
 
-        #attention
-        y = y.reshape((y.shape[0], 6,self.out_lay3))
+        #Attention Mechanism
+        y = y.reshape((y.shape[0], 6,self.out_lay3)) # bs x 6 x 64
         # print(y.shape)
-        attention_weight = self.attention_weight(y) #bsx6x6
+        attention_weight = self.attention_weight(y) # bs x 6 , Get attention weight
         # print(attention_weight.shape)
-        softmax = F.softmax(attention_weight,dim=-1)
+        softmax = F.softmax(attention_weight,dim=-1) # bs x 6, Convert to probability (0-1) through softmax
         # print(softmax.shape)
-        y = torch.bmm(attention_weight, y)
+        y = torch.bmm(softmax, y) #batch matrix mulitplication of the 6 output (models) and attention weight
         # print(y.shape)
-        y = y.reshape(-1, self.out_lay3 *6)
+        y = y.reshape(-1, self.out_lay3 *6) # bs x 384, Aft multiplication by attention weight, rehsape to orginal shape
         # print(y.shape) # comment until here to check without attention
 
         output = self.output(y)
@@ -125,7 +122,7 @@ class Net_CNN(nn.Module):
         self.layer3 = nn.Conv1d(in_channels=args.out_lay2, out_channels=args.out_lay3, kernel_size =1)
         self.output = nn.Linear(args.out_lay3, args.output_dim)
 
-        #1 Hidden Layer Model
+        # #1 Hidden Layer Model
         # self.embedding = nn.Linear(args.num_param, args.out_embed)
         # self.layer3 = nn.Conv1d(in_channels=args.out_embed, out_channels=args.out_lay3, kernel_size =1)
         # self.output = nn.Linear(args.out_lay3, args.output_dim)

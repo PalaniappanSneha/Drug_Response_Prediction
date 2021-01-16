@@ -30,12 +30,12 @@ parser = argparse.ArgumentParser(description='Drug Response Prediction')
 parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
 parser.add_argument('--epoch', type=int, default=500, help='number of epochs')
 parser.add_argument('--lr', type=float, default=0.01, help='initial learning rate')
-parser.add_argument('--esthres', type=int, default=20, help='')
+parser.add_argument('--esthres', type=int, default=20, help='early stopping threshold')
 # parser.add_argument('--est', type=int, default=30, help='early_stopping_threshold')
 
 parser.add_argument('--checkpoint', type=str, default=None, help='path/to/checkpoint.pth.tar')
-parser.add_argument('--data', type=str, default='RPPA', help='')
-parser.add_argument('--model', type=str, default='Net', help='')
+parser.add_argument('--data', type=str, default='RPPA', help='specify omics data - default RPPA')
+parser.add_argument('--model', type=str, default='Net', help='specify model(Net/Net_CNN) -default Net')
 parser.add_argument('--expr_dir', type=str, default="experiments/", help='path/to/save_dir')
 parser.add_argument('--cv', action='store_true', help='cross validation') #--cv
 # parser.add_argument('--num_param', type=int, default =101)
@@ -44,7 +44,6 @@ parser.add_argument('--out_lay2', type=int, default =128)
 parser.add_argument('--out_lay3', type=int, default =64)
 parser.add_argument('--output_dim',type=int, default=24)
 parser.add_argument('--dropout',type=float, default=0)
-# num_parameter,out_embedding=200,out_layer2=128,out_layer3=32,output_dim=22
 
 def calc_r2 (x,y):
     total = 0
@@ -99,6 +98,7 @@ def main(args, train_data, valid_data, test_data,train_label, valid_label, test_
     all_train_r_square= []
     all_valid_r_square =[]
     all_test_r_square =[]
+    all_accuracy, all_topkaccuracy, all_f1 = [],[],[]
 
     #For Early Stopping
     best_valid_loss = 99999
@@ -108,7 +108,7 @@ def main(args, train_data, valid_data, test_data,train_label, valid_label, test_
     max_r2_train = -99999999999999999
 
     count = 0
-
+    s1time = time.time()
     for epoch in range(0,args.epoch):
 
         # train for one epoch
@@ -121,14 +121,17 @@ def main(args, train_data, valid_data, test_data,train_label, valid_label, test_
         all_train_TT.append(TT)
 
         # evaluate on validation set
-        epoch_val_loss, r_square_val = validate(val_loader, model, criterion, args)
+        epoch_val_loss, r_square_val, accuracy, topkaccuracy, f1 = validate(val_loader, model, criterion, args)
         all_valid_loss.append(epoch_val_loss)
         all_valid_r_square.append(r_square_val )
 
         # evaluate on test set
-        epoch_test_loss, r_square_test = validate(test_loader, model, criterion, args, test_flag =True)
+        epoch_test_loss, r_square_test, epoch_acc, epoch_topk, epoch_f1 = validate(test_loader, model, criterion, args, test_flag =True)
         all_test_loss.append(epoch_test_loss)
         all_test_r_square.append(r_square_test )
+        all_accuracy.append(epoch_acc)
+        all_topkaccuracy.append(epoch_topk)
+        all_f1.append(epoch_f1)
 
         #Early Stopping
         state = {
@@ -148,13 +151,20 @@ def main(args, train_data, valid_data, test_data,train_label, valid_label, test_
             best_train_loss = epoch_total_loss
 
             test_r_square_best_valid = r_square_test
+            best_accuracy = epoch_acc
+            best_topk = epoch_topk
+            best_f1 = epoch_f1
 
             save_checkpoint(state, True, args)
         else:
             count = count + 1
             if(count >= args.esthres):
                 break
+        # best_valid_loss = 0
+        # test_loss_best_val = 0
+        # best_train_loss = 0
 
+    PCA_TT = time.time() -s1time
     # print(r_square_train)
     # print(r_square_test)
 
@@ -176,10 +186,10 @@ def main(args, train_data, valid_data, test_data,train_label, valid_label, test_
     plt.ylabel('loss')
     plt.xlabel('No. of epochs')
     plt.legend(['train', 'test'], loc='upper right')
-    plt.savefig(os.path.join(args.expr_dir, 'miRNA_16_DNN_20.png'))
+    plt.savefig(os.path.join(args.expr_dir, 'test.png'))
 
     # return best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square
-    return best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test, best_train_loss
+    return best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test, best_train_loss, PCA_TT, best_accuracy, best_topk, best_f1
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
     total_loss = 0.0
@@ -202,9 +212,13 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
         #Forward pass to compute predicted output
         output = model(input) #bsx24
+        # print(output)
+        # print(target)
+
         #storing predicted and target values
         pred_values=np.concatenate((pred_values,output.cpu().detach().numpy()), axis=0)
         target_values = np.concatenate((target_values,target.cpu().detach().numpy()) ,axis=0)
+
         #Calculate Loss: MSE
         loss = criterion(output, target)
         #Adding loss for current iteration into total_loss
@@ -222,14 +236,17 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     total_loss =  total_loss/(i+1)
     #calc r2
     r_square =  calc_r2(pred_values, target_values)
+
+
     #Find best drug
     best_drug_target = np.argmin(target_values, axis = -1) #Returns the indices of the minimum values along an axis
     best_drug_predicted = np.argmin(pred_values, axis = -1)
+
     #Find top 3 drugs
     best_drug_target_top3 = torch.topk(torch.tensor(target_values), k=3, largest = False, dim=-1)[1]
 
     accuracy = calc_accuracy(best_drug_target,best_drug_predicted)
-    topkaccuracy = top_k(best_drug_predicted, best_drug_target_top3) #? (best_drug_target_top3, best_drug_predicted)
+    topkaccuracy = top_k(best_drug_predicted, best_drug_target_top3)
     f1 = f1_score(best_drug_predicted,best_drug_target, average = 'micro')
 
     if args.verbose:
@@ -252,6 +269,7 @@ def validate(val_loader, model, criterion, args, test_flag=False):
     total_loss = 0.0
     pred_values = np.empty((0,24))
     target_values = np.empty((0,24))
+
     #Turn off gradients computation
     with torch.no_grad():
 
@@ -275,6 +293,7 @@ def validate(val_loader, model, criterion, args, test_flag=False):
     total_loss =  total_loss/(i+1)
     #calc r2
     r_square =  calc_r2(pred_values, target_values)
+
     #Find best drug
     best_drug_target = np.argmin(target_values, axis = -1) #Returns the indices of the minimum values along an axis
     best_drug_predicted = np.argmin(pred_values, axis = -1)
@@ -282,7 +301,7 @@ def validate(val_loader, model, criterion, args, test_flag=False):
     best_drug_target_top3 = torch.topk(torch.tensor(target_values), k=3, largest = False, dim=-1)[1]
 
     accuracy = calc_accuracy(best_drug_target,best_drug_predicted)
-    topkaccuracy = top_k(best_drug_predicted, best_drug_target_top3) #? (best_drug_target_top3, best_drug_predicted)
+    topkaccuracy = top_k(best_drug_predicted, best_drug_target_top3)
     f1 = f1_score(best_drug_predicted,best_drug_target, average = 'micro')
 
     #print options
@@ -304,7 +323,7 @@ def validate(val_loader, model, criterion, args, test_flag=False):
     #     print('{type}: \t'
     #       'Loss {loss:.4f}\t'.format(type=txt,loss=total_loss))
 
-    return total_loss, r_square
+    return total_loss, r_square, accuracy, topkaccuracy, f1
 
 def save_checkpoint(state, is_best, args, filename='checkpoint.pth.tar'):
     torch.save(state, os.path.join(args.expr_dir, filename))
@@ -379,6 +398,11 @@ if __name__ == '__main__':
         #new (using best values of r2)
         r2_log = []
 
+        #acc,topk,f1
+        acc_log = []
+        topk_log = []
+        f1_log = []
+
         #In this case text_index is my val_index
         for train_index, test_index in kf.split(train_val_data):
 
@@ -388,16 +412,22 @@ if __name__ == '__main__':
             train_data, val_data = train_val_data[train_index], train_val_data[test_index]
             train_label, val_label = train_val_label[train_index], train_val_label[test_index]
 
-            best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test, best_train_loss = main(args, train_data, val_data, test_data, train_label, val_label, test_label)
+            best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test, best_train_loss, PCA_TT, best_accuracy, best_topk, best_f1 = main(args, train_data, val_data, test_data, train_label, val_label, test_label)
 
             best_valid_results.append(best_valid_loss)
             test_loss_best_val_results.append(test_loss_best_val)
 
+            #using avg values of r2
             test_r_square_cv.append(avg_test_r_square)
             std_test_r_square_cv.append(std_test_r_square)
 
-            #newly added (using best values of r2, max_r2_test)
+            #using best values of r2, max_r2_tes
             r2_log.append(max_r2_test)
+
+            #acc,topk,f1
+            acc_log.append(best_accuracy)
+            topk_log.append(best_topk)
+            f1_log.append(best_f1)
 
         #Get avg. scores obtained across the k-folds
         best_valid_average = np.mean(best_valid_results)
@@ -405,16 +435,21 @@ if __name__ == '__main__':
         #new
         std_mse_test = np.std(test_loss_best_val_results)
 
+        #using avg values of r2
         test_r2_average_cv = np.mean(test_r_square_cv)
         test_r2_std_cv = np.mean(std_test_r_square_cv)
 
-        #newly added (using best values of r2)
+        #using best values of r2
         mean_r2_test = np.mean(r2_log)
         std_r2_test = np.std(r2_log)
 
+        acc_avg = np.mean(acc_log)
+        topk_avg = np.mean(topk_log)
+        f1_avg = np.mean(f1_log)
+
         # print("best_valid_loss_CV_avg:", best_valid_average,  "test_loss_best_val_CV_avg:", test_loss_best_val_average,"best_test_r2_average:", test_r2_average_cv, "best_test_r2_std:", test_r2_std_cv) #?shud be just r2 avg. not best_test_r2 avg?
-        print("best_valid_loss_CV_avg:", best_valid_average,  "test_loss_best_val_CV_avg:", test_loss_best_val_average,"best_test_r2_average:", test_r2_average_cv, "best_test_r2_std:", test_r2_std_cv, "mean_r2_test", mean_r2_test, "std_r2_test", std_r2_test, "std_mse",std_mse_test)
+        print("best_valid_loss_CV_avg:", best_valid_average,  "test_loss_best_val_CV_avg:", test_loss_best_val_average,"best_test_r2_average:", test_r2_average_cv, "best_test_r2_std:", test_r2_std_cv, "mean_r2_test", mean_r2_test, "std_r2_test", std_r2_test, "std_mse",std_mse_test, "acc_avg",acc_avg,"topk_avg",topk_avg,"f1_avg",f1_avg)
     else:
-        best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test, best_train_loss = main(args, train_data, valid_data, test_data, train_label, valid_label, test_label)
+        best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test, best_train_loss, PCA_TT, best_accuracy, best_topk, best_f1 = main(args, train_data, valid_data, test_data, train_label, valid_label, test_label)
         # print("best_valid_loss:", best_valid_loss,  "test_loss_best_val:", test_loss_best_val, "best_test_r2_average:", avg_test_r_square, "best_test_r2_std:", std_test_r_square)
-        print("best_train_loss", best_train_loss,"best_valid_loss:", best_valid_loss,  "test_loss_best_val:", test_loss_best_val, "best_test_r2_average:", avg_test_r_square, "best_test_r2_std:", std_test_r_square, "max_r2_train:", max_r2_train, "max_r2_test", max_r2_test)
+        print("best_train_loss", best_train_loss,"best_valid_loss:", best_valid_loss,  "test_loss_best_val:", test_loss_best_val, "best_test_r2_average:", avg_test_r_square, "best_test_r2_std:", std_test_r_square, "max_r2_train:", max_r2_train, "max_r2_test", max_r2_test, "Total Time",PCA_TT)
