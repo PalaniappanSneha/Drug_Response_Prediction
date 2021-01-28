@@ -29,9 +29,11 @@ class Net(nn.Module):
 
         #2 Hidden Layer Model
         self.embedding = nn.Linear(args.num_param, args.out_embed) #PCA layer
-        self.layer2 = nn.Linear(args.out_embed, args.out_lay2)
-        self.layer3 = nn.Linear(args.out_lay2, args.out_lay3)
-        self.output = nn.Linear(args.out_lay3, args.output_dim)
+        # self.layer2 = nn.Linear(args.out_embed, args.out_lay2)
+        # self.layer3 = nn.Linear(args.out_lay2, args.out_lay3)
+        # self.layer3 = nn.Linear(args.out_embed, args.out_lay3)
+        # self.output = nn.Linear(args.out_lay3, args.output_dim, bias=False)
+        self.output = nn.Linear(args.out_embed, args.output_dim, bias=False)
 
         # Define proportion or neurons to dropout
         self.dropout = nn.Dropout(args.dropout)
@@ -40,10 +42,12 @@ class Net(nn.Module):
     def forward(self, x, hid_out=False):
 
         y = self.embedding(x)
-        y = F.relu(self.layer2(y)) #comment this line for 1 Hudden Layer Model
-        y = self.dropout(y) #comment this line for 1 Hidden Layer Model
-        y = F.relu(self.layer3(y))
-        y = self.dropout(y)
+        y = F.relu(y)
+        # y = self.dropout(y)
+        # y = F.relu(self.layer2(y)) #comment this line for 1 Hidden Layer Model
+        # y = self.dropout(y) #comment this line for 1 Hidden Layer Model
+        # y = F.relu(self.layer3(y))
+        # y = self.dropout(y)
         if (hid_out == True):
             return y
         y = self.output(y)
