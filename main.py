@@ -17,6 +17,9 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
 from sklearn.metrics import r2_score, f1_score
 
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]="3"
+
 torch.manual_seed(5)
 torch.cuda.manual_seed(5)
 torch.cuda.manual_seed_all(5)  # if you are using multi-GPU.
@@ -45,12 +48,15 @@ parser.add_argument('--out_lay3', type=int, default =64)
 parser.add_argument('--output_dim',type=int, default=24)
 parser.add_argument('--dropout',type=float, default=0)
 
-def calc_r2 (x,y):
-    total = 0
-    for i in range(24):
-        total += r2_score(x[:,i],y[:,i])
-    total /= 24
-    return total
+#def calc_r2 (x,y):
+#    total = 0
+#    for i in range(24):
+#        total += r2_score(x[:,i],y[:,i])
+#    total /= 24
+#    return total
+    
+def calc_r2(x, y):
+    return r2_score(x, y)
 
 def calc_accuracy(x,y):
     correct = np.sum(x == y)
@@ -218,6 +224,8 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         #storing predicted and target values
         pred_values=np.concatenate((pred_values,output.cpu().detach().numpy()), axis=0)
         target_values = np.concatenate((target_values,target.cpu().detach().numpy()) ,axis=0)
+        # print(pred_values.shape)
+        # print(target_values.shape)
 
         #Calculate Loss: MSE
         loss = criterion(output, target)
