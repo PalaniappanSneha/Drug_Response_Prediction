@@ -22,18 +22,21 @@ class Net(nn.Module):
         #self.fc1 = nn.Linear(input, output)
 
         #1 Hidden Layer Model
-        # self.embedding = nn.Linear(args.num_param, args.out_embed)
-        # self.layer3 = nn.Linear(args.out_embed, args.out_lay3)
-        # #nn.init.xavier_normal_(self.layer3.weight)
-        # self.output = nn.Linear(args.out_lay3, args.output_dim)
+        self.embedding = nn.Linear(args.num_param, args.out_lay1) #layer1
+        self.output = nn.Linear(args.out_lay1, args.output_dim, bias=False)
 
         #2 Hidden Layer Model
-        self.embedding = nn.Linear(args.num_param, args.out_embed) #PCA layer
-        # self.layer2 = nn.Linear(args.out_embed, args.out_lay2)
-        # self.layer3 = nn.Linear(args.out_lay2, args.out_lay3)
-        # self.layer3 = nn.Linear(args.out_embed, args.out_lay3)
+        # self.embedding = nn.Linear(args.num_param, args.out_lay1)
+        # self.layer3 = nn.Linear(args.out_lay1, args.out_lay3)
         # self.output = nn.Linear(args.out_lay3, args.output_dim, bias=False)
-        self.output = nn.Linear(args.out_embed, args.output_dim, bias=False)
+
+        # # #old Hidden Layer Model
+        # self.embedding = nn.Linear(args.num_param, args.out_lay1) #layer1
+        # # # self.layer2 = nn.Linear(args.out_lay1, args.out_lay2)
+        # # # self.layer3 = nn.Linear(args.out_lay2, args.out_lay3)
+        # self.layer3 = nn.Linear(args.out_lay1, args.out_lay3) #2 lay
+        # self.output = nn.Linear(args.out_lay3, args.output_dim, bias=False) #2 lay
+        # # self.output = nn.Linear(args.out_lay1, args.output_dim, bias=False)
 
         # Define proportion or neurons to dropout
         self.dropout = nn.Dropout(args.dropout)
@@ -43,7 +46,7 @@ class Net(nn.Module):
 
         y = self.embedding(x)
         y = F.relu(y)
-        # y = self.dropout(y)
+        y = self.dropout(y)
         # y = F.relu(self.layer2(y)) #comment this line for 1 Hidden Layer Model
         # y = self.dropout(y) #comment this line for 1 Hidden Layer Model
         # y = F.relu(self.layer3(y))
@@ -80,11 +83,18 @@ class Net_combined(nn.Module):
             p.requires_grad = False
         for n,p in self.model6.named_parameters():
             p.requires_grad = False #comment until here to try
-        self.out_lay3 = args.out_lay3
+        self.out_lay3 = args.out_lay3 #2 Layer
+        # self.out_lay1 = args.out_lay1 #1 Layer
 
+        #2 Layer
         self.output = nn.Linear(self.out_lay3*6, args.output_dim)
         #Attention Layer
         self.attention_weight = nn.Linear(args.out_lay3, 6) # bs x 6
+
+        # #1 Layer
+        # self.output = nn.Linear(self.out_lay1*6, args.output_dim)
+        # #Attention Layer
+        # self.attention_weight = nn.Linear(args.out_lay1, 6) # 256 x 6
 
     #Telling model what to do with the layers
     def forward(self, x1,x2,x3,x4,x5,x6): #model_RPPA, model_Meta, model_Mut, model_Exp, model_CNV,model_miRNA
@@ -110,6 +120,19 @@ class Net_combined(nn.Module):
         y = y.reshape(-1, self.out_lay3 *6) # bs x 384, Aft multiplication by attention weight, rehsape to orginal shape
         # print(y.shape) # comment until here to check without attention
 
+        # #1 Layer
+        # #Attention Mechanism
+        # y = y.reshape((y.shape[0], 6,self.out_lay1)) # bs x 6 x 64
+        # # print(y.shape)
+        # attention_weight = self.attention_weight(y) # bs x 6 , Get attention weight
+        # # print(attention_weight.shape)
+        # softmax = F.softmax(attention_weight,dim=-1) # bs x 6, Convert to probability (0-1) through softmax
+        # # print(softmax.shape)
+        # y = torch.bmm(softmax, y) #batch matrix mulitplication of the 6 output (models) and attention weight
+        # # print(y.shape)
+        # y = y.reshape(-1, self.out_lay1 *6) # bs x 384, Aft multiplication by attention weight, rehsape to orginal shape
+        # # print(y.shape) # comment until here to check without attention
+
         output = self.output(y)
         # print(output.shape)
 
@@ -121,15 +144,16 @@ class Net_CNN(nn.Module):
         super(Net_CNN, self).__init__()
 
         # 2 Hidden Layer Model
-        self.embedding = nn.Linear(args.num_param, args.out_embed)
-        self.layer2 = nn.Conv1d(in_channels=args.out_embed, out_channels=args.out_lay2,kernel_size =1)
+        self.embedding = nn.Linear(args.num_param, args.out_lay1)
+        self.layer2 = nn.Conv1d(in_channels=args.out_lay1, out_channels=args.out_lay2,kernel_size =1)
         self.layer3 = nn.Conv1d(in_channels=args.out_lay2, out_channels=args.out_lay3, kernel_size =1)
         self.output = nn.Linear(args.out_lay3, args.output_dim)
 
         # #1 Hidden Layer Model
-        # self.embedding = nn.Linear(args.num_param, args.out_embed)
-        # self.layer3 = nn.Conv1d(in_channels=args.out_embed, out_channels=args.out_lay3, kernel_size =1)
+        # self.embedding = nn.Linear(args.num_param, args.out_lay1)
+        # self.layer3 = nn.Conv1d(in_channels=args.out_lay1, out_channels=args.out_lay3, kernel_size =1)
         # self.output = nn.Linear(args.out_lay3, args.output_dim)
+
 
         # Define proportion of neurons to dropout
         self.dropout = nn.Dropout(args.dropout)
@@ -138,6 +162,8 @@ class Net_CNN(nn.Module):
     def forward(self, x, hid_out=False):
 
         y = self.embedding(x).unsqueeze(-1) #bs x 200 x 1
+        y = F.relu(y)
+        y = self.dropout(y)
         y = F.relu(self.layer2(y)) #comment this line for 1 Hidden Layer Model
         y = self.dropout(y) #comment this line for 1 Hidden Layer Model
         y = F.relu(self.layer3(y)).squeeze()

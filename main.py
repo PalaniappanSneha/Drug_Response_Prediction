@@ -18,7 +18,8 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import r2_score, f1_score
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="3"
+os.environ["CUDA_DEVICE_ORDER"]= "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 torch.manual_seed(5)
 torch.cuda.manual_seed(5)
@@ -42,7 +43,7 @@ parser.add_argument('--model', type=str, default='Net', help='specify model(Net/
 parser.add_argument('--expr_dir', type=str, default="experiments/", help='path/to/save_dir')
 parser.add_argument('--cv', action='store_true', help='cross validation') #--cv
 # parser.add_argument('--num_param', type=int, default =101)
-parser.add_argument('--out_embed', type=int, default=200)
+parser.add_argument('--out_lay1', type=int, default=200)
 parser.add_argument('--out_lay2', type=int, default =128)
 parser.add_argument('--out_lay3', type=int, default =64)
 parser.add_argument('--output_dim',type=int, default=24)
@@ -54,7 +55,7 @@ parser.add_argument('--dropout',type=float, default=0)
 #        total += r2_score(x[:,i],y[:,i])
 #    total /= 24
 #    return total
-    
+
 def calc_r2(x, y):
     return r2_score(x, y)
 
@@ -192,7 +193,7 @@ def main(args, train_data, valid_data, test_data,train_label, valid_label, test_
     plt.ylabel('loss')
     plt.xlabel('No. of epochs')
     plt.legend(['train', 'test'], loc='upper right')
-    plt.savefig(os.path.join(args.expr_dir, 'test.png'))
+    plt.savefig(os.path.join(args.expr_dir, 'comb_x53.png'))
 
     # return best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square
     return best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test, best_train_loss, PCA_TT, best_accuracy, best_topk, best_f1

@@ -18,6 +18,10 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
 from sklearn.metrics import r2_score, f1_score
 
+import os
+os.environ["CUDA_DEVICE_ORDER"]= "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"]="3"
+
 torch.manual_seed(5)
 torch.cuda.manual_seed(5)
 torch.cuda.manual_seed_all(5)  # if you are using multi-GPU.
@@ -42,7 +46,7 @@ parser.add_argument('--expr_dir', type=str, default="experiments/", help='path/t
 parser.add_argument('--cv', action='store_true', help='cross validation') #--cv
 # parser.add_argument('--num_param', type=int, default =101)
 
-parser.add_argument('--out_embed', type=int, default=200)
+parser.add_argument('--out_lay1', type=int, default=200)
 parser.add_argument('--out_lay2', type=int, default =128) #comment for one layer
 parser.add_argument('--out_lay3', type=int, default =64)
 parser.add_argument('--output_dim',type=int, default=24)
@@ -81,40 +85,40 @@ def main(args, train_data,valid_data,test_data):
     train_data,valid_data,test_data = read_combined()
 
     args.num_param = 101
-    args.out_embed = 101
+    args.out_lay1 = 256
     #args.dropout = 0.1
-    model_RPPA = Net(args)
-    # model_RPPA = Net_CNN(args)
+    # model_RPPA = Net(args)
+    model_RPPA = Net_CNN(args)
     model_RPPA = load_checkpoint('experiments/RPPA/model_best.pth.tar', model_RPPA)
 
     args.num_param = 197
-    args.out_embed = 197
-    model_miRNA = Net(args)
-    # model_miRNA = Net_CNN(args)
+    args.out_lay1 = 256
+    # model_miRNA = Net(args)
+    model_miRNA = Net_CNN(args)
     model_miRNA = load_checkpoint('experiments/miRNA/model_best.pth.tar', model_miRNA) #create folder
 
     args.num_param = 80
-    args.out_embed = 80
-    model_Meta = Net(args)
-    # model_Meta = Net_CNN(args)
+    args.out_lay1 = 256
+    # model_Meta = Net(args)
+    model_Meta = Net_CNN(args)
     model_Meta = load_checkpoint('experiments/Meta/model_best.pth.tar', model_Meta)
 
     args.num_param = 1040
-    args.out_embed = 1040
-    model_Mut = Net(args)
-    # model_Mut = Net_CNN(args)
+    args.out_lay1 = 256
+    # model_Mut = Net(args)
+    model_Mut = Net_CNN(args)
     model_Mut = load_checkpoint('experiments/Mut/model_best.pth.tar', model_Mut)
 
     args.num_param = 616
-    args.out_embed = 616
-    model_Exp = Net(args)
-    # model_Exp = Net_CNN(args)
+    args.out_lay1 = 256
+    # model_Exp = Net(args)
+    model_Exp = Net_CNN(args)
     model_Exp = load_checkpoint('experiments/Exp/model_best.pth.tar', model_Exp)
 
     args.num_param = 88
-    args.out_embed = 88
-    model_CNV = Net(args)
-    # model_CNV = Net_CNN(args)
+    args.out_lay1 = 256
+    # model_CNV = Net(args)
+    model_CNV = Net_CNN(args)
     model_CNV = load_checkpoint('experiments/CNV/model_best.pth.tar', model_CNV)
 
 
@@ -231,7 +235,7 @@ def main(args, train_data,valid_data,test_data):
     plt.ylabel('loss')
     plt.xlabel('No. of epochs')
     plt.legend(['train', 'test'], loc='upper right')
-    plt.savefig(os.path.join(args.expr_dir, 'combined_x14.png'))
+    plt.savefig(os.path.join(args.expr_dir, 'comb_x53.png'))
 
 
     return best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test,best_train_loss,best_accuracy, best_topk, best_f1, best_tmp1, best_tmp2

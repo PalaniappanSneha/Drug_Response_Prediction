@@ -15,6 +15,8 @@ torch.backends.cudnn.deterministic = True
 
 
 def read_RPPA(path='Data/DNN/DNN_Input_RPPA.csv', cv = False):
+# def read_RPPA(path='Data/DNN/DNN_Input_RPPA_svd.csv', cv = False):
+# def read_RPPA(path='Data/DNN/DNN_Input_RPPA_ica.csv', cv = False):
 	with open(path) as csvfile:
 		RPPA_reader = csv.reader(csvfile)
 		RPPA = np.array(list(RPPA_reader))
@@ -48,6 +50,7 @@ def read_RPPA(path='Data/DNN/DNN_Input_RPPA.csv', cv = False):
 
 def read_Meta(path='Data/DNN/DNN_Input_Metabolomics.csv', cv = False):
 # def read_Meta(path='Data/DNN/DNN_Input_Metabolomics_svd.csv', cv = False):
+# def read_Meta(path='Data/DNN/DNN_Input_Metabolomics_ica.csv', cv = False):
 	with open(path) as csvfile:
 		Meta_reader = csv.reader(csvfile)
 		Meta = np.array(list(Meta_reader))
@@ -79,6 +82,8 @@ def read_Meta(path='Data/DNN/DNN_Input_Metabolomics.csv', cv = False):
 
 
 def read_Expression(path='Data/DNN/DNN_Input_Expression.csv', cv = False):
+# def read_Expression(path='Data/DNN/DNN_Input_Expression_svd.csv', cv = False):
+# def read_Expression(path='Data/DNN/DNN_Input_Expression_ica.csv', cv = False):
 	with open(path) as csvfile:
 		exp_reader = csv.reader(csvfile)
 		Exp = np.array(list(exp_reader))
@@ -110,6 +115,8 @@ def read_Expression(path='Data/DNN/DNN_Input_Expression.csv', cv = False):
 
 
 def read_Mutations(path='Data/DNN/DNN_Input_Mutation.csv', cv = False):
+# def read_Mutations(path='Data/DNN/DNN_Input_Mutation_svd.csv', cv = False):
+# def read_Mutations(path='Data/DNN/DNN_Input_Mutation_ica.csv', cv = False):
 	with open(path) as csvfile:
 		mut_reader = csv.reader(csvfile)
 		Mut = np.array(list(mut_reader))
@@ -141,6 +148,8 @@ def read_Mutations(path='Data/DNN/DNN_Input_Mutation.csv', cv = False):
 
 
 def read_CNV(path='Data/DNN/DNN_Input_CNV.csv', cv = False):
+# def read_CNV(path='Data/DNN/DNN_Input_CNV_svd.csv', cv = False):
+# def read_CNV(path='Data/DNN/DNN_Input_CNV_ica.csv', cv = False):
 	with open(path) as csvfile:
 		CNV_reader = csv.reader(csvfile)
 		CNV = np.array(list(CNV_reader))
@@ -170,6 +179,8 @@ def read_CNV(path='Data/DNN/DNN_Input_CNV.csv', cv = False):
 	return train_data, train_label, valid_data, valid_label, test_data, test_label
 
 def read_miRNA(path='Data/DNN/DNN_Input_miRNA.csv', cv = False):
+# def read_miRNA(path='Data/DNN/DNN_Input_miRNA_svd.csv', cv = False):
+# def read_miRNA(path='Data/DNN/DNN_Input_miRNA_ica.csv', cv = False):
 	with open(path) as csvfile:
 		miRNA_reader = csv.reader(csvfile)
 		miRNA = np.array(list(miRNA_reader))
