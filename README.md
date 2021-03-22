@@ -6,17 +6,21 @@ Flow of codes and project:
    - Preprocessing of omics data into matrices
 2) pca_6_datasets.ipynb
    - Conduct PCA on omics data matrices
-3) dnn_preprocessing.ipynb
+3) svd_6_datasets.ipynb
+   - Conduct SVD on omics data matrices
+4)  ica_6_datasets.ipynb
+   - Conduct ICA on omics data matrices
+6) dnn_preprocessing.ipynb
    - Preparing input data for input DNN (Append drug response to data etc...)
-4) combined_data.ipynb
+7) combined_data.ipynb
    - Preparing input data for combined DNN
-5) datasets.py
+8) datasets.py
    - Read data 
-6) model.py 
+9) model.py 
    - Specifications of model
-7) main.py
+10) main.py
    - Individual DNN
-8) main_combined.py 
+11) main_combined.py 
    - Comined DNN
 
  
