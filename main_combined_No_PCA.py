@@ -17,11 +17,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
 from sklearn.metrics import r2_score, f1_score
-
-import os
-os.environ["CUDA_DEVICE_ORDER"]= "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]="3"
-
+# torch.manual_seed(10)
+# np.random.seed(10)
 torch.manual_seed(5)
 torch.cuda.manual_seed(5)
 torch.cuda.manual_seed_all(5)  # if you are using multi-GPU.
@@ -44,7 +41,7 @@ parser.add_argument('--data', type=str, default='RPPA', help='')
 parser.add_argument('--model', type=str, default='Net', help='')
 parser.add_argument('--expr_dir', type=str, default="experiments/", help='path/to/save_dir')
 parser.add_argument('--cv', action='store_true', help='cross validation') #--cv
-# parser.add_argument('--num_param', type=int, default =101)
+# parser.add_argument('--num_param', type=int, default =214) #Remember to change parameter when reading diff dataset
 
 parser.add_argument('--out_lay1', type=int, default=200)
 parser.add_argument('--out_lay2', type=int, default =128) #comment for one layer
@@ -52,6 +49,7 @@ parser.add_argument('--out_lay3', type=int, default =64)
 parser.add_argument('--output_dim',type=int, default=24)
 parser.add_argument('--dropout',type=float, default=0)
 
+# num_parameter,out_lay1ding=200,out_layer2=128,out_layer3=32,output_dim=22
 def calc_r2 (x,y):
     total = 0
     for i in range(24):
@@ -82,41 +80,41 @@ def main(args, train_data,valid_data,test_data):
     #Loss Function
     criterion = nn.MSELoss()
 
-    train_data,valid_data,test_data = read_combined()
+    train_data,valid_data,test_data = read_combined_No_PCA()
 
-    args.num_param = 101
-    args.out_lay1 = 256
+    args.num_param = 214
+    args.out_lay1 = 214
     #args.dropout = 0.1
     model_RPPA = Net(args)
     # model_RPPA = Net_CNN(args)
     model_RPPA = load_checkpoint('experiments/RPPA/model_best.pth.tar', model_RPPA)
 
-    args.num_param = 197
-    args.out_lay1 = 256
+    args.num_param = 734
+    args.out_lay1 = 734
     model_miRNA = Net(args)
     # model_miRNA = Net_CNN(args)
     model_miRNA = load_checkpoint('experiments/miRNA/model_best.pth.tar', model_miRNA) #create folder
 
-    args.num_param = 80
-    args.out_lay1 = 256
+    args.num_param = 225
+    args.out_lay1 = 225
     model_Meta = Net(args)
     # model_Meta = Net_CNN(args)
     model_Meta = load_checkpoint('experiments/Meta/model_best.pth.tar', model_Meta)
 
-    args.num_param = 1040
-    args.out_lay1 = 256
+    args.num_param = 18771
+    args.out_lay1 = 18771
     model_Mut = Net(args)
     # model_Mut = Net_CNN(args)
     model_Mut = load_checkpoint('experiments/Mut/model_best.pth.tar', model_Mut)
 
-    args.num_param = 616
-    args.out_lay1 = 256
+    args.num_param = 17359
+    args.out_lay1 = 17359
     model_Exp = Net(args)
     # model_Exp = Net_CNN(args)
     model_Exp = load_checkpoint('experiments/Exp/model_best.pth.tar', model_Exp)
 
-    args.num_param = 88
-    args.out_lay1 = 256
+    args.num_param = 24501
+    args.out_lay1 = 24501
     model_CNV = Net(args)
     # model_CNV = Net_CNN(args)
     model_CNV = load_checkpoint('experiments/CNV/model_best.pth.tar', model_CNV)
@@ -235,7 +233,7 @@ def main(args, train_data,valid_data,test_data):
     plt.ylabel('loss')
     plt.xlabel('No. of epochs')
     plt.legend(['train', 'test'], loc='upper right')
-    plt.savefig(os.path.join(args.expr_dir, 'comb_x53.png'))
+    plt.savefig(os.path.join(args.expr_dir, 'combined_x5.png'))
 
 
     return best_valid_loss, test_loss_best_val, avg_test_r_square, std_test_r_square, max_r2_train, max_r2_test,best_train_loss,best_accuracy, best_topk, best_f1, best_tmp1, best_tmp2
@@ -374,9 +372,9 @@ if __name__ == '__main__':
     #1) data loading
     if args.cv:
         #train_val_data,test_data - returns 5 features and 1 label;
-        train_val_data, train_val_label, test_data, test_label = read_combined(cv=args.cv)
+        train_val_data, train_val_label, test_data, test_label = read_combined_No_PCA(cv=args.cv)
     else:
-        train_data,valid_data,test_data = read_combined(cv=args.cv)
+        train_data,valid_data,test_data = read_combined_No_PCA(cv=args.cv)
 
     #print options
     if args.cv:
@@ -403,7 +401,7 @@ if __name__ == '__main__':
         topk_log = []
         f1_log = []
 
-        test_data_RPPA, test_data_miRNA, test_data_Meta,  test_data_Mut, test_data_Exp, test_data_CNV = test_data[:,:101],test_data[:,101:298],test_data[:,298:378],test_data[:,378:1418],test_data[:,1418:2034],test_data[:,2034:2122]
+        test_data_RPPA, test_data_miRNA, test_data_Meta,  test_data_Mut, test_data_Exp, test_data_CNV = test_data[:,:214],test_data[:,214:948],test_data[:,948:1173],test_data[:,1173:19944],test_data[:,19944:37303],test_data[:,37303:61804]
         test_data =  (torch.tensor(test_data_RPPA), torch.tensor(test_data_miRNA), torch.tensor(test_data_Meta), torch.tensor(test_data_Mut), torch.tensor(test_data_Exp), torch.tensor(test_data_CNV),torch.tensor(test_label))
         #In this case text_index is my val_index
         for train_index, test_index in kf.split(train_val_data):
@@ -412,8 +410,8 @@ if __name__ == '__main__':
             train_data, val_data = train_val_data[train_index], train_val_data[test_index]
             train_label, val_label = train_val_label[train_index], train_val_label[test_index]
             #Differentiating features and labels
-            train_data_RPPA,  train_data_miRNA, train_data_Meta, train_data_Mut, train_data_Exp, train_data_CNV = train_data[:,:101],train_data[:,101:298],train_data[:,298:378],train_data[:,378:1418],train_data[:,1418:2034],train_data[:,2034:2122]
-            valid_data_RPPA, valid_data_miRNA, valid_data_Meta,  valid_data_Mut, valid_data_Exp, valid_data_CNV = val_data[:,:101],val_data[:,101:298],val_data[:,298:378],val_data[:,378:1418],val_data[:,1418:2034],val_data[:,2034:2122]
+            train_data_RPPA,  train_data_miRNA, train_data_Meta, train_data_Mut, train_data_Exp, train_data_CNV = train_data[:,:214],train_data[:,214:948],train_data[:,948:1173],train_data[:,1173:19944],train_data[:,19944:37303],train_data[:,37303:61804]
+            valid_data_RPPA, valid_data_miRNA, valid_data_Meta,  valid_data_Mut, valid_data_Exp, valid_data_CNV = val_data[:,:214],val_data[:,214:948],val_data[:,948:1173],val_data[:,1173:19944],val_data[:,19944:37303],val_data[:,37303:61804]
 
             train_data =  (torch.tensor(train_data_RPPA), torch.tensor(train_data_miRNA), torch.tensor(train_data_Meta), torch.tensor(train_data_Mut), torch.tensor(train_data_Exp), torch.tensor(train_data_CNV),torch.tensor(train_label))
             valid_data =  (torch.tensor(valid_data_RPPA), torch.tensor(valid_data_miRNA), torch.tensor(valid_data_Meta), torch.tensor(valid_data_Mut), torch.tensor(valid_data_Exp), torch.tensor(valid_data_CNV),torch.tensor(val_label))

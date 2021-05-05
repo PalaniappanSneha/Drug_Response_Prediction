@@ -83,18 +83,18 @@ class Net_combined(nn.Module):
             p.requires_grad = False
         for n,p in self.model6.named_parameters():
             p.requires_grad = False #comment until here to try
-        self.out_lay3 = args.out_lay3 #2 Layer
-        # self.out_lay1 = args.out_lay1 #1 Layer
+        # self.out_lay3 = args.out_lay3 #2 Layer
+        self.out_lay1 = args.out_lay1 #1 Layer
 
-        #2 Layer
-        self.output = nn.Linear(self.out_lay3*6, args.output_dim)
-        #Attention Layer
-        self.attention_weight = nn.Linear(args.out_lay3, 6) # bs x 6
-
-        # #1 Layer
-        # self.output = nn.Linear(self.out_lay1*6, args.output_dim)
+        # #2 Layer
+        # self.output = nn.Linear(self.out_lay3*6, args.output_dim)
         # #Attention Layer
-        # self.attention_weight = nn.Linear(args.out_lay1, 6) # 256 x 6
+        # self.attention_weight = nn.Linear(args.out_lay3, 6) # bs x 6
+
+        #1 Layer
+        self.output = nn.Linear(self.out_lay1*6, args.output_dim)
+        #Attention Layer
+        self.attention_weight = nn.Linear(args.out_lay1, 6) # 256 x 6
 
     #Telling model what to do with the layers
     def forward(self, x1,x2,x3,x4,x5,x6): #model_RPPA, model_Meta, model_Mut, model_Exp, model_CNV,model_miRNA
@@ -105,33 +105,34 @@ class Net_combined(nn.Module):
         y5 = self.model5(x5, hid_out = True)
         y6 = self.model6(x6, hid_out = True)
         #Concatenate
-        y=torch.cat([y1,y2,y3,y4,y5,y6],dim=-1) # bs x 384
+        y=torch.cat([y1,y2,y3,y4,y5,y6],dim=-1) # bs x (256x6)
         # print(y.shape)
+        #
+        # #Attention Mechanism
+        # y = y.reshape((y.shape[0], 6,self.out_lay3))
+        # # print(y.shape)
+        # attention_weight = self.attention_weight(y)
+        # # print(attention_weight.shape)
+        # softmax = F.softmax(attention_weight,dim=-1)
+        # # print(softmax.shape)
+        # y = torch.bmm(softmax, y)
+        # # print(y.shape)
+        # y = y.reshape(-1, self.out_lay3 *6)
+        # # print(y.shape)
 
+        #1 Layer
         #Attention Mechanism
-        y = y.reshape((y.shape[0], 6,self.out_lay3)) # bs x 6 x 64
+        y = y.reshape((y.shape[0], 6,self.out_lay1)) # bs x 6 x 256
+
         # print(y.shape)
         attention_weight = self.attention_weight(y) # bs x 6 , Get attention weight
         # print(attention_weight.shape)
         softmax = F.softmax(attention_weight,dim=-1) # bs x 6, Convert to probability (0-1) through softmax
         # print(softmax.shape)
-        y = torch.bmm(softmax, y) #batch matrix mulitplication of the 6 output (models) and attention weight
+        y = torch.bmm(softmax, y) # bs x 256, batch matrix mulitplication of the 6 output (models) and attention weight
         # print(y.shape)
-        y = y.reshape(-1, self.out_lay3 *6) # bs x 384, Aft multiplication by attention weight, rehsape to orginal shape
+        y = y.reshape(-1, self.out_lay1 *6) # bs x 256, Aft multiplication by attention weight, rehsape to orginal shape
         # print(y.shape) # comment until here to check without attention
-
-        # #1 Layer
-        # #Attention Mechanism
-        # y = y.reshape((y.shape[0], 6,self.out_lay1)) # bs x 6 x 64
-        # # print(y.shape)
-        # attention_weight = self.attention_weight(y) # bs x 6 , Get attention weight
-        # # print(attention_weight.shape)
-        # softmax = F.softmax(attention_weight,dim=-1) # bs x 6, Convert to probability (0-1) through softmax
-        # # print(softmax.shape)
-        # y = torch.bmm(softmax, y) #batch matrix mulitplication of the 6 output (models) and attention weight
-        # # print(y.shape)
-        # y = y.reshape(-1, self.out_lay1 *6) # bs x 384, Aft multiplication by attention weight, rehsape to orginal shape
-        # # print(y.shape) # comment until here to check without attention
 
         output = self.output(y)
         # print(output.shape)
