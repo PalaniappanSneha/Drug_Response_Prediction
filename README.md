@@ -1,6 +1,11 @@
 "# Drug_Response_Prediction" 
 "# Drug_Response_Prediction" 
 
+To run the individual model:
+Ex. python3 main.py --data Exp --expr_dir experiments/Exp/ --esthres 50 --dropout 0.2 --out_lay1 256 --cv
+To run the combined model:
+Ex. python3 main_combined.py --expr_dir experiments/combined/ --esthres 50 --dropout 0.50 --out_lay1 256 --cv
+
 Flow of codes and project:
 1) preprocessing_updated_data.ipynb
    - Preprocessing of omics data into matrices
@@ -22,8 +27,5 @@ Flow of codes and project:
    - Individual DNN
 10) main_combined.py 
    - Combined DNN
-To run the individual model:
-Ex. python3 main.py --data Exp --expr_dir experiments/Exp/ --esthres 50 --dropout 0.2 --out_lay1 256 --cv
-To run the combined model:
-Ex. python3 main_combined.py --expr_dir experiments/combined/ --esthres 50 --dropout 0.50 --out_lay1 256 --cv
+
  
