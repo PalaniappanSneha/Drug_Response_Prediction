@@ -21,6 +21,9 @@ Flow of codes and project:
 9) main.py
    - Individual DNN
 10) main_combined.py 
-   - Comined DNN
-
+   - Combined DNN
+To run the individual model:
+Ex. python3 main.py --data Exp --expr_dir experiments/Exp/ --esthres 50 --dropout 0.2 --out_lay1 256 --cv
+To run the combined model:
+Ex. python3 main_combined.py --expr_dir experiments/combined/ --esthres 50 --dropout 0.50 --out_lay1 256 --cv
  
